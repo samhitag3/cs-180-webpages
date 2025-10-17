@@ -33,28 +33,220 @@
 <main>
   <h2>Part A: IMAGE WARPING and MOSAICING</h2>
   <h3>Part A.1: Shoot the Pictures</h3>
+
   <h4>Image set 1: bookcase in Cory Hall</h4>
-  <p>I picked this set of images since there were a lot of clear corners to work with, making it easy to identify the overlap between different images.</p>
+  <p>I picked this set of images since there were a lot of clear corners (from the bookcase) to work with, making it easy to identify the overlap between different images.</p>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/cory2.JPG" alt="Cory bookcase, left angle" width="400px">
+           <img src="images/bookcase1-points.jpg" alt="Cory bookcase, left angle" width="400px">
            <figcaption>Cory bookcase, left angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/cory3.JPG" alt="Cory bookcase, center angle" width="400px">
+           <img src="images/bookcase2-points.jpg" alt="Cory bookcase, center angle" width="400px">
            <figcaption>Cory bookcase, center angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/cory4.JPG" alt="Cory bookcase, right angle" width="400px">
+           <img src="images/bookcase3-points.jpg" alt="Cory bookcase, right angle" width="400px">
            <figcaption>Cory bookcase, right angle</figcaption>
         </td>
       </tr>
     </table>
+  </div>
 
-    <h4>Image set 2: lab in Cory Hall</h4>
+  <h4>Image set 2: lab in Cory Hall</h4>
+  <p>The ping pong table and the shelves in this lab provided a lot of corners for me to work with.</p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/lab1-points.JPG" alt="Cory lab, left angle" width="400px">
+           <figcaption>Cory lab, left angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/lab2-points.JPG" alt="Cory lab, center angle" width="400px">
+           <figcaption>Cory lab, center angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/lab3-points.JPG" alt="Cory lab, right angle" width="400px">
+           <figcaption>Cory lab, right angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h4>Image set 3: Jacobs entrance</h4>
+  <p>The windows and the lettering at the entrance gave me easy corner points to work with/</p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs1-points.JPG" alt="Jacobs, left angle" width="400px">
+           <figcaption>Jacobs, left angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-points.JPG" alt="Jacobs, center angle" width="400px">
+           <figcaption>Jacobs, center angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs3-points.JPG" alt="Jacobs, right angle" width="400px">
+           <figcaption>Jacobs, right angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>Part A.2: Recover Homographies</h3>
+  <p>My <code>computeH</code> function serves to recover the matrix 
+    <code>H</code> that correspond to the transform required to go 
+    from one of the center angle images to left / right angled images 
+    in the photo sets above with projective transformations. The 
+    equation is:
+    \[ p' = Hp \]</p>
+  <p></p>
+
+  <h4>Image set 1: bookcase in Cory Hall</h4>
+  <p>MATRIX</p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/bookcase3-points.JPG" alt="Cory bookcase, right angle" width="400px">
+           <figcaption>Cory bookcase, right angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/recovered-bookcase3-points.JPG" alt="Cory bookcase with applied homography" width="400px">
+           <figcaption>Cory bookcase with applied homography</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/bookcase2-points.JPG" alt="Cory bookcase, center angle" width="400px">
+           <figcaption>Cory bookcase, center angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h4>Image set 2: lab in Cory Hall</h4>
+  <p>MATRIX</p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/lab3-points.JPG" alt="Cory lab, right angle" width="400px">
+           <figcaption>Cory lab, right angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/recovered-lab3-points.JPG" alt="Cory lab with applied homography" width="400px">
+           <figcaption>Cory lab with applied homography</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/lab2-points.JPG" alt="Cory lab, center angle" width="400px">
+           <figcaption>Cory lab, center angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h4>Image set 3: Jacobs entrance</h4>
+  <p>MATRIX</p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs1-points.JPG" alt="Jacobs, left angle" width="400px">
+           <figcaption>Jacobs, left angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/recovered-jacobs1-points.JPG" alt="Jacobs with applied homography" width="400px">
+           <figcaption>Jacobs with applied homography</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-points.JPG" alt="Jacobs, center angle" width="400px">
+           <figcaption>Jacobs, center angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>Part A.3: Warp the Images</h3>
+  <p></p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/torectify1-points.jpg" alt="image 1 for rectification, original" width="400px">
+           <figcaption>image 1 for rectification, original</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/rectified1-nearest.JPG" alt="image 1 rectified using nearest neighbor interpolation" width="400px">
+           <figcaption>image 1 rectified using nearest neighbor interpolation</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/rectified1-bilinear.jpg" alt="image 1 rectified using bilinear interpolation" width="400px">
+           <figcaption>image 1 rectified using bilinear interpolation</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/torectify2-points.jpg" alt="image 2 for rectification, original" width="400px">
+           <figcaption>image 2 for rectification, original</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/rectified2-nearest.JPG" alt="image 2 rectified using nearest neighbor interpolation" width="400px">
+           <figcaption>image 2 rectified using nearest neighbor interpolation</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/rectified2-bilinear.jpg" alt="image 2 rectified using bilinear interpolation" width="400px">
+           <figcaption>image 2 rectified using bilinear interpolation</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+
+  <h3>Part A.4: Blend the Images into a Mosaic</h3>
+  <p></p>
+
+  <h4>Image set 1: bookcase in Cory Hall</h4>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/bookcase1.jpg" alt="Cory bookcase, left angle" width="400px">
+           <figcaption>Cory bookcase, left angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/bookcase2.jpg" alt="Cory bookcase, center angle" width="400px">
+           <figcaption>Cory bookcase, center angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/bookcase3.jpg" alt="Cory bookcase, right angle" width="400px">
+           <figcaption>Cory bookcase, right angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/bookcase-mosaic.jpg" alt="Cory bookcase mosaic" width="1200px">
+           <figcaption>Cory bookcase mosaic</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h4>Image set 2: lab in Cory Hall</h4>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
@@ -74,123 +266,243 @@
       </tr>
     </table>
   </div>
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/lab-mosaic.jpg" alt="Cory lab mosaic" width="1200px">
+           <figcaption>Cory lab mosaic</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h4>Image set 3: Jacobs entrance</h4>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs1.JPG" alt="Cory lab, left angle" width="400px">
+           <img src="images/jacobs1.JPG" alt="Jacobs, left angle" width="400px">
            <figcaption>Jacobs, left angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs2.JPG" alt="Cory lab, center angle" width="400px">
+           <img src="images/jacobs2.JPG" alt="Jacobs, center angle" width="400px">
            <figcaption>Jacobs, center angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs3.JPG" alt="Cory lab, right angle" width="400px">
+           <img src="images/jacobs3.JPG" alt="Jacobs, right angle" width="400px">
            <figcaption>Jacobs, right angle</figcaption>
         </td>
       </tr>
     </table>
   </div>
-
-  <h3>Part A.2: Recover Homographies</h3>
-  <p>My <code>computeH</code> function serves to recover the matrix 
-    <code>H</code> that correspond to the transform required to go 
-    from one of the center angle images to left / right angled images 
-    in the photo sets above with projective transformations. The 
-    equation is:
-    \[ p' = Hp \]</p>
-  <p></p>
-
-  <h3>Part A.3: Warp the Images</h3>
-  <p></p>
-
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/warped_cory2.jpg" alt="Cory bookcase, left angle" width="400px">
-           <figcaption>Cory bookcase, left angle, warped</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/cory3.JPG" alt="Cory bookcase, center angle" width="400px">
-           <figcaption>Cory bookcase, center angle</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/warped_cory4.jpg" alt="Cory bookcase, right angle" width="400px">
-           <figcaption>Cory bookcase, right angle, warped</figcaption>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <div style="display: flex; flex-direction: column; align-items: center;">
-    <table style="width: 100%; text-align: center; border-collapse: collapse;">
-      <tr>
-        <td style="text-align: center;">
-           <img src="images/warped_lab1.jpg" alt="Cory bookcase, left angle" width="400px">
-           <figcaption>Cory lab, left angle, warped</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/lab2.JPG" alt="Cory bookcase, center angle" width="400px">
-           <figcaption>Cory lab, center angle</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/warped_lab3.jpg" alt="Cory bookcase, right angle" width="400px">
-           <figcaption>Cory lab, right angle, warped</figcaption>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <div style="display: flex; flex-direction: column; align-items: center;">
-    <table style="width: 100%; text-align: center; border-collapse: collapse;">
-      <tr>
-        <td style="text-align: center;">
-           <img src="images/warped_jacobs1.jpg" alt="Cory bookcase, left angle" width="400px">
-           <figcaption>Jacobs, left angle, warped</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/jacobs2.JPG" alt="Cory bookcase, center angle" width="400px">
-           <figcaption>Jacobs, center angle</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/warped_jacobs3.jpg" alt="Cory bookcase, right angle" width="400px">
-           <figcaption>Jacobs, right angle, warped</figcaption>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <h3>Part A.4: Blend the Images into a Mosaic</h3>
-  <p></p>
-  <div style="display: flex; flex-direction: column; align-items: center;">
-    <table style="width: 100%; text-align: center; border-collapse: collapse;">
-      <tr>
-        <td style="text-align: center;">
-           <img src="images/mosaic_cory.jpg" alt="Cory bookcase, left angle" width="400px">
-           <figcaption>Cory bookcase mosaic</figcaption>
-        </td>
-      </tr>
-    </table>
-  </div>
-  <div style="display: flex; flex-direction: column; align-items: center;">
-    <table style="width: 100%; text-align: center; border-collapse: collapse;">
-      <tr>
-        <td style="text-align: center;">
-           <img src="images/mosaic_lab.jpg" alt="Cory bookcase, left angle" width="400px">
-           <figcaption>Cory <label for=""></label> mosaic</figcaption>
-        </td>
-      </tr>
-    </table>
-  </div>
-  <div style="display: flex; flex-direction: column; align-items: center;">
-    <table style="width: 100%; text-align: center; border-collapse: collapse;">
-      <tr>
-        <td style="text-align: center;">
-           <img src="images/mosaic_jacobs.jpg" alt="Cory bookcase, left angle" width="400px">
+           <img src="images/jacobs-mosaic.jpg" alt="Jacobs mosaic" width="1200px">
            <figcaption>Jacobs mosaic</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>Part B: FEATURE MATCHING for AUTOSTITCHING</h2>
+
+  <h3>Part B.1: Harris Corner Detection</h3>
+  <p></p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/bookcase2-corners-noANMS.jpg" alt="Harris Corners (no ANMS) for Cory bookcase, center angle" width="600px">
+           <figcaption>Harris Corners (no ANMS) for Cory bookcase, center angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/bookcase2-corners-wANMS.jpg" alt="Harris Corners (w ANMS) for Cory bookcase, center angle" width="600px">
+           <figcaption>Harris Corners (with ANMS) for Cory bookcase, center angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/lab2-corners-noANMS.jpg" alt="Harris Corners (no ANMS) for Cory lab, center angle" width="600px">
+           <figcaption>Harris Corners (no ANMS) for Cory lab, center angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/lab2-corners-wANMS.jpg" alt="Harris Corners (w ANMS) for Cory lab, center angle" width="600px">
+           <figcaption>Harris Corners (with ANMS) for Cory lab, center angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-corners-noANMS.jpg" alt="Harris Corners (no ANMS) for Jacobs, center angle" width="600px">
+           <figcaption>Harris Corners (no ANMS) for Jacobs, center angle</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-corners-wANMS.jpg" alt="Harris Corners (w ANMS) for Cory lab, center angle" width="600px">
+           <figcaption>Harris Corners (with ANMS) for Jacobs, center angle</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+
+  <h3>Part B.2: Feature Descriptor Extraction</h3>
+  <p></p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-features.jpg" alt="top # features for Jacobs" width="800px">
+           <figcaption>top # features for Jacobs</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
+           <figcaption>feature # for Jacobs</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
+           <figcaption>feature # for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
+           <figcaption>feature # for Jacobs</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
+           <figcaption>feature # for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
+           <figcaption>feature # for Jacobs</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
+           <figcaption>feature # for Jacobs</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>Part B.3: Feature Matching</h3>
+  <p></p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
+           <figcaption>feature # for Jacobs (center angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
+           <figcaption>feature # for Jacobs (right angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
+           <figcaption>feature # for Jacobs (center angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
+           <figcaption>feature # for Jacobs (right angle)</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
+           <figcaption>feature # for Jacobs (center angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
+           <figcaption>feature # for Jacobs (right angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
+           <figcaption>feature # for Jacobs (center angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
+           <figcaption>feature # for Jacobs (right angle)</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
+           <figcaption>feature # for Jacobs (center angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
+           <figcaption>feature # for Jacobs (right angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
+           <figcaption>feature # for Jacobs (center angle)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
+           <figcaption>feature # for Jacobs (right angle)</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>Part B.4: RANSAC for Robust Homography</h3>
+  <p></p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/bookcase-mosaic.jpg" alt="Cory bookcase mosaic (manual)" width="600px">
+           <figcaption>Cory bookcase mosaic (manual)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/bookcase-auto-mosaic.jpg" alt="Cory bookcase mosaic (auto-stitched)" width="600px">
+           <figcaption>Cory bookcase mosaic (auto-stitched)</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/lab-mosaic.jpg" alt="Cory lab mosaic (manual)" width="600px">
+           <figcaption>Cory lab mosaic (manual)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/lab-auto-mosaic.jpg" alt="Cory lab mosaic (auto-stitched)" width="600px">
+           <figcaption>Cory lab mosaic (auto-stitched)</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs-mosaic.jpg" alt="Jacobs mosaic (manual)" width="600px">
+           <figcaption>Jacobs mosaic (manual)</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs-auto-mosaic.jpg" alt="Jacobs mosaic (auto-stitched)" width="600px">
+           <figcaption>Jacobs mosaic (auto-stitched)</figcaption>
         </td>
       </tr>
     </table>
