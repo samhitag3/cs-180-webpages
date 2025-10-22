@@ -21,6 +21,7 @@
     .small { max-width: 680px; margin: 0 auto; }
     .note { background: #fffbe6; border: 1px solid #ffe58f; padding: 10px 12px; border-radius: 6px; }
     .muted { opacity: 0.8; }
+    .equ { background: #fbfbff; border: 1px dashed #dfe3ff; padding: 8px 10px; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -35,21 +36,21 @@
   <h3>Part A.1: Shoot the Pictures</h3>
 
   <h4>Image set 1: bookcase in Cory Hall</h4>
-  <p>I picked this set of images since there were a lot of clear corners (from the bookcase) to work with, making it easy to identify the overlap between different images.</p>
+  <p>I picked this set of images since there were a lot of clear corners (from the bookcase) to work with, making it easy to identify the overlap between different images. I tried to keep the center of projection fixed and rotated the camera, shooting with a good amount of overlap so that features repeat across views.</p>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/bookcase1-points.jpg" alt="Cory bookcase, left angle" width="400px">
+           <img src="images/bookcase1-points.JPG" alt="Cory bookcase, left angle" width="400px">
            <figcaption>Cory bookcase, left angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/bookcase2-points.jpg" alt="Cory bookcase, center angle" width="400px">
+           <img src="images/bookcase2-points.JPG" alt="Cory bookcase, center angle" width="400px">
            <figcaption>Cory bookcase, center angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/bookcase3-points.jpg" alt="Cory bookcase, right angle" width="400px">
+           <img src="images/bookcase3-points.JPG" alt="Cory bookcase, right angle" width="400px">
            <figcaption>Cory bookcase, right angle</figcaption>
         </td>
       </tr>
@@ -79,7 +80,7 @@
   </div>
 
   <h4>Image set 3: Jacobs entrance</h4>
-  <p>The windows and the lettering at the entrance gave me easy corner points to work with/</p>
+  <p>The windows and the lettering at the entrance gave me easy corner points to work with.</p>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
@@ -101,17 +102,38 @@
   </div>
 
   <h3>Part A.2: Recover Homographies</h3>
-  <p>My <code>computeH</code> function serves to recover the matrix 
-    <code>H</code> that correspond to the transform required to go 
-    from one of the center angle images to left / right angled images 
-    in the photo sets above with projective transformations. The 
-    equation is:
-    \[ p' = Hp \]</p>
-  <p></p>
+  <p>My <code>computeH</code> routine implements the Direct Linear Transform with least squares. Given point correspondences \(p_i=(x_i,y_i,1)^\top\) in the source image and \(p'_i=(x'_i,y'_i,1)^\top\) in the destination image, I solved for a homography \(H\) (with 8 variables by fixing \(h_{33}=1\)) that satisfies \(p'_i\sim H p_i\).</p>
+  <div class="equ small">
+    <p>For each correspondence, I add two rows to \(A\) and solve the overdetermined system \(A\,h=b\) (or equivalently the homogeneous system \(A\,h=0\) with \(\|h\|=1\)):
+    \[
+      \begin{bmatrix}
+        x_i & y_i & 1 & 0 & 0 & 0 & -x'_i x_i & -x'_i y_i \\
+        0 & 0 & 0 & x_i & y_i & 1 & -y'_i x_i & -y'_i y_i
+      \end{bmatrix}
+      \begin{bmatrix}
+        h_{11} \\ h_{12} \\ h_{13} \\ h_{21} \\ h_{22} \\ h_{23} \\ h_{31} \\ h_{32}
+      \end{bmatrix}
+      =
+      \begin{bmatrix}
+        x'_i \\ y'_i
+      \end{bmatrix}
+    \]
+    I use more than four correspondences and solve via least squares (numerically via SVD / <code>np.linalg.lstsq</code>). Before solving, I normalize points (translate to zero mean and scale so average distance is \(\sqrt{2}\)) to improve accuracy; after solving, I denormalize and enforce \(h_{33}=1\).</p>
+  </div>
+  <p>To verify the estimate, I project the annotated points from one view onto the other and overlay them. The <code>recovered-*.JPG</code> overlays below show that the cyan crosses (warped points) align with the red dots (manual picks), indicating a good fit.</p>
 
   <h4>Image set 1: bookcase in Cory Hall</h4>
-  <p>MATRIX</p>
-
+  <div class="equ small">
+  <p>For the bookcase, I had the following homography:
+  \[
+    \begin{bmatrix}
+      0.724138 & 0.007652 & 1456.190610 \\
+      -0.174361 & 0.959848 & 46.128964 \\
+      -0.000072 & 0.000011 & 1.000000
+    \end{bmatrix}
+  \]
+  </p>
+</div>
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
@@ -132,9 +154,18 @@
   </div>
 
   <h4>Image set 2: lab in Cory Hall</h4>
-  <p>MATRIX</p>
-
-  <div style="display: flex; flex-direction: column; align-items: center;">
+  <div class="equ small">
+  <p>For the lab, I had the following homography:
+  \[
+    \begin{bmatrix}
+      0.324593 & -0.063095 & 1133.726300 \\
+      -0.409549 & 0.706606 & 542.347616 \\
+      -0.000218 & -0.000014 & 1.000000
+    \end{bmatrix}
+  \]
+  </p>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
@@ -154,9 +185,18 @@
   </div>
 
   <h4>Image set 3: Jacobs entrance</h4>
-  <p>MATRIX</p>
-
-  <div style="display: flex; flex-direction: column; align-items: center;">
+  <div class="equ small">
+  <p>For the third homography, I had the following homography:
+  \[
+    \begin{bmatrix}
+      1.758435 & 0.039888 & -1284.801950 \\
+      0.473575 & 1.442918 & -806.244441 \\
+      0.000253 & 0.000002 & 1.000000
+    \end{bmatrix}
+  \]
+  </p>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
@@ -176,44 +216,49 @@
   </div>
 
   <h3>Part A.3: Warp the Images</h3>
-  <p></p>
+  <p>Using \(H\), I inverse-warped each output pixel back into the source image. I first predicted the destination canvas bounds by projecting the four source corners with \(H\) and taking integer min/max extents. Then I created a regular grid over that canvas, mapped each grid location through \(H^{-1}\), and sampled the source either with nearest neighbor or bilinear interpolation:</p>
+  <ul>
+    <li><strong>Nearest Neighbor</strong>: round \((x_s,y_s)\) to the closest integer location.</li>
+    <li><strong>Bilinear</strong>: use the weighted average of the four neighbors around \((x_s,y_s)\). I computed fractional offsets \(\alpha,\beta\) and blended the four samples accordingly. This produced visibly smoother rectifications at the cost of more arithmetic.</li>
+  </ul>
+  <p>I also used an alpha mask that marks valid samples (inside the source bounds) so later stages could overlap cleanly.</p>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/torectify1-points.jpg" alt="image 1 for rectification, original" width="400px">
+           <img src="images/torectify3-points.JPG" alt="image 1 for rectification, original" width="400px">
            <figcaption>image 1 for rectification, original</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/rectified1-nearest.JPG" alt="image 1 rectified using nearest neighbor interpolation" width="400px">
+           <img src="images/rectified3-nearest.JPG" alt="image 1 rectified using nearest neighbor interpolation" width="400px">
            <figcaption>image 1 rectified using nearest neighbor interpolation</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/rectified1-bilinear.jpg" alt="image 1 rectified using bilinear interpolation" width="400px">
+           <img src="images/rectified3-bilinear.JPG" alt="image 1 rectified using bilinear interpolation" width="400px">
            <figcaption>image 1 rectified using bilinear interpolation</figcaption>
         </td>
       </tr>
       <tr>
         <td style="text-align: center;">
-           <img src="images/torectify2-points.jpg" alt="image 2 for rectification, original" width="400px">
+           <img src="images/torectify4-points.JPG" alt="image 2 for rectification, original" width="400px">
            <figcaption>image 2 for rectification, original</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/rectified2-nearest.JPG" alt="image 2 rectified using nearest neighbor interpolation" width="400px">
+           <img src="images/rectified4-nearest.JPG" alt="image 2 rectified using nearest neighbor interpolation" width="400px">
            <figcaption>image 2 rectified using nearest neighbor interpolation</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/rectified2-bilinear.jpg" alt="image 2 rectified using bilinear interpolation" width="400px">
+           <img src="images/rectified4-bilinear.JPG" alt="image 2 rectified using bilinear interpolation" width="400px">
            <figcaption>image 2 rectified using bilinear interpolation</figcaption>
         </td>
       </tr>
     </table>
   </div>
-
+  <p class="small muted">Trade-off: bilinear is slightly slower but reduces aliasing and “stair-step” artifacts compared to nearest neighbor, matching the expected quality/speed trade-off from the spec.</p>
 
   <h3>Part A.4: Blend the Images into a Mosaic</h3>
-  <p></p>
+  <p>To build mosaics, I chose the middle view as reference, estimated \(H\) for the side views into that reference, warped them, and assembled all images on a canvas large enough to contain all warped corners. For blending, I started with feathering and where seams are noticeable, I use a small Laplacian pyramid to blend the overlap while keeping edges crisp.</p>
 
   <h4>Image set 1: bookcase in Cory Hall</h4>
 
@@ -221,15 +266,15 @@
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/bookcase1.jpg" alt="Cory bookcase, left angle" width="400px">
+           <img src="images/bookcase1.JPG" alt="Cory bookcase, left angle" width="400px">
            <figcaption>Cory bookcase, left angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/bookcase2.jpg" alt="Cory bookcase, center angle" width="400px">
+           <img src="images/bookcase2.JPG" alt="Cory bookcase, center angle" width="400px">
            <figcaption>Cory bookcase, center angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/bookcase3.jpg" alt="Cory bookcase, right angle" width="400px">
+           <img src="images/bookcase3.JPG" alt="Cory bookcase, right angle" width="400px">
            <figcaption>Cory bookcase, right angle</figcaption>
         </td>
       </tr>
@@ -239,7 +284,7 @@
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/bookcase-mosaic.jpg" alt="Cory bookcase mosaic" width="1200px">
+           <img src="images/bookcase-mosaic.JPG" alt="Cory bookcase mosaic" width="1200px">
            <figcaption>Cory bookcase mosaic</figcaption>
         </td>
       </tr>
@@ -270,7 +315,7 @@
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/lab-mosaic.jpg" alt="Cory lab mosaic" width="1200px">
+           <img src="images/lab-mosaic.JPG" alt="Cory lab mosaic" width="1200px">
            <figcaption>Cory lab mosaic</figcaption>
         </td>
       </tr>
@@ -301,7 +346,7 @@
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs-mosaic.jpg" alt="Jacobs mosaic" width="1200px">
+           <img src="images/jacobs-mosaic.JPG" alt="Jacobs mosaic" width="1200px">
            <figcaption>Jacobs mosaic</figcaption>
         </td>
       </tr>
@@ -311,17 +356,17 @@
   <h2>Part B: FEATURE MATCHING for AUTOSTITCHING</h2>
 
   <h3>Part B.1: Harris Corner Detection</h3>
-  <p></p>
+  <p>Following the spec, I detect corners using the Harris response (second-moment matrix and its eigenvalues). I visualize detected corners before and after Adaptive Non-Maximal Suppression (ANMS) to ensure a good spatial spread across the image, which helps robust matching.</p>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/bookcase2-corners-noANMS.jpg" alt="Harris Corners (no ANMS) for Cory bookcase, center angle" width="600px">
+           <img src="images/bookcase2-corners-noANMS.JPG" alt="Harris Corners (no ANMS) for Cory bookcase, center angle" width="600px">
            <figcaption>Harris Corners (no ANMS) for Cory bookcase, center angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/bookcase2-corners-wANMS.jpg" alt="Harris Corners (w ANMS) for Cory bookcase, center angle" width="600px">
+           <img src="images/bookcase2-corners-wANMS.JPG" alt="Harris Corners (w ANMS) for Cory bookcase, center angle" width="600px">
            <figcaption>Harris Corners (with ANMS) for Cory bookcase, center angle</figcaption>
         </td>
       </tr>
@@ -332,11 +377,11 @@
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/lab2-corners-noANMS.jpg" alt="Harris Corners (no ANMS) for Cory lab, center angle" width="600px">
+           <img src="images/lab2-corners-noANMS.JPG" alt="Harris Corners (no ANMS) for Cory lab, center angle" width="600px">
            <figcaption>Harris Corners (no ANMS) for Cory lab, center angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/lab2-corners-wANMS.jpg" alt="Harris Corners (w ANMS) for Cory lab, center angle" width="600px">
+           <img src="images/lab2-corners-wANMS.JPG" alt="Harris Corners (w ANMS) for Cory lab, center angle" width="600px">
            <figcaption>Harris Corners (with ANMS) for Cory lab, center angle</figcaption>
         </td>
       </tr>
@@ -347,11 +392,11 @@
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs2-corners-noANMS.jpg" alt="Harris Corners (no ANMS) for Jacobs, center angle" width="600px">
+           <img src="images/jacobs2-corners-noANMS.JPG" alt="Harris Corners (no ANMS) for Jacobs, center angle" width="600px">
            <figcaption>Harris Corners (no ANMS) for Jacobs, center angle</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs2-corners-wANMS.jpg" alt="Harris Corners (w ANMS) for Cory lab, center angle" width="600px">
+           <img src="images/jacobs2-corners-wANMS.JPG" alt="Harris Corners (w ANMS) for Cory lab, center angle" width="600px">
            <figcaption>Harris Corners (with ANMS) for Jacobs, center angle</figcaption>
         </td>
       </tr>
@@ -360,148 +405,184 @@
   
 
   <h3>Part B.2: Feature Descriptor Extraction</h3>
-  <p></p>
+  <p>I extract square patches centered at each selected corner, normalize them (subtract mean, divide by std), and downsample to a compact feature vector. These descriptors are grayscale and contrast-normalized so that lighting changes don’t dominate matching.</p>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs2-features.jpg" alt="top # features for Jacobs" width="800px">
-           <figcaption>top # features for Jacobs</figcaption>
+           <img src="images/jacobs2-features.JPG" alt="top 12 features for Jacobs" width="800px">
+           <figcaption>top 12 features for Jacobs</figcaption>
         </td>
       </tr>
     </table>
   </div>
-
+  <p>Top 12 features in Jacobs photo (center angle)</p>
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
-           <figcaption>feature # for Jacobs</figcaption>
+           <img src="images/jacobs2-feature1.JPG" alt="feature 1 for Jacobs" width="600px">
+           <figcaption>feature 1 for Jacobs</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
-           <figcaption>feature # for Jacobs</figcaption>
-        </td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
-           <figcaption>feature # for Jacobs</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
-           <figcaption>feature # for Jacobs</figcaption>
+           <img src="images/jacobs2-feature2.JPG" alt="feature 2 for Jacobs" width="600px">
+           <figcaption>feature 2 for Jacobs</figcaption>
         </td>
       </tr>
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
-           <figcaption>feature # for Jacobs</figcaption>
+           <img src="images/jacobs2-feature3.JPG" alt="feature 3 for Jacobs" width="600px">
+           <figcaption>feature 3 for Jacobs</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs" width="600px">
-           <figcaption>feature # for Jacobs</figcaption>
+           <img src="images/jacobs2-feature4.JPG" alt="feature 4 for Jacobs" width="600px">
+           <figcaption>feature 4 for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature5.JPG" alt="feature 5 for Jacobs" width="600px">
+           <figcaption>feature 5 for Jacobs</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature6.JPG" alt="feature 6 for Jacobs" width="600px">
+           <figcaption>feature 6 for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature7.JPG" alt="feature 7 for Jacobs" width="600px">
+           <figcaption>feature 7 for Jacobs</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature8.JPG" alt="feature 8 for Jacobs" width="600px">
+           <figcaption>feature 8 for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature9.JPG" alt="feature 9 for Jacobs" width="600px">
+           <figcaption>feature 9 for Jacobs</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature10.JPG" alt="feature 10 for Jacobs" width="600px">
+           <figcaption>feature 10 for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature11.JPG" alt="feature 11 for Jacobs" width="600px">
+           <figcaption>feature 11 for Jacobs</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs2-feature12.JPG" alt="feature 12 for Jacobs" width="600px">
+           <figcaption>feature 12 for Jacobs</figcaption>
         </td>
       </tr>
     </table>
   </div>
 
   <h3>Part B.3: Feature Matching</h3>
-  <p></p>
-
+  <p>I match descriptors using SSD (sum of squared differences) and apply Lowe’s ratio test to prune ambiguous matches. The ratio between the best and second-best SSD must fall below a threshold; surviving matches are much more reliable and reduce false correspondences in repetitive textures.</p>
+  <p>Top 12 features in Jacobs photos (center angle vs. right angle)</p>
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
-           <figcaption>feature # for Jacobs (center angle)</figcaption>
+           <img src="images/jacobs23-feature1.JPG" alt="feature 1 for Jacobs" width="600px">
+           <figcaption>feature 1 for Jacobs</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
-           <figcaption>feature # for Jacobs (right angle)</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
-           <figcaption>feature # for Jacobs (center angle)</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
-           <figcaption>feature # for Jacobs (right angle)</figcaption>
+           <img src="images/jacobs23-feature2.JPG" alt="feature 2 for Jacobs" width="600px">
+           <figcaption>feature 2 for Jacobs</figcaption>
         </td>
       </tr>
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
-           <figcaption>feature # for Jacobs (center angle)</figcaption>
+           <img src="images/jacobs23-feature3.JPG" alt="feature 3 for Jacobs" width="600px">
+           <figcaption>feature 3 for Jacobs</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
-           <figcaption>feature # for Jacobs (right angle)</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
-           <figcaption>feature # for Jacobs (center angle)</figcaption>
-        </td>
-        <td style="text-align: center;">
-           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
-           <figcaption>feature # for Jacobs (right angle)</figcaption>
+           <img src="images/jacobs23-feature4.JPG" alt="feature 4 for Jacobs" width="600px">
+           <figcaption>feature 4 for Jacobs</figcaption>
         </td>
       </tr>
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
-           <figcaption>feature # for Jacobs (center angle)</figcaption>
+           <img src="images/jacobs23-feature5.JPG" alt="feature 5 for Jacobs" width="600px">
+           <figcaption>feature 5 for Jacobs</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
-           <figcaption>feature # for Jacobs (right angle)</figcaption>
+           <img src="images/jacobs23-feature6.JPG" alt="feature 6 for Jacobs" width="600px">
+           <figcaption>feature 6 for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs23-feature7.JPG" alt="feature 7 for Jacobs" width="600px">
+           <figcaption>feature 7 for Jacobs</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs2-feature#.jpg" alt="feature # for Jacobs (center angle)" width="300px">
-           <figcaption>feature # for Jacobs (center angle)</figcaption>
+           <img src="images/jacobs23-feature8.JPG" alt="feature 8 for Jacobs" width="600px">
+           <figcaption>feature 8 for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs23-feature9.JPG" alt="feature 9 for Jacobs" width="600px">
+           <figcaption>feature 9 for Jacobs</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs3-feature#.jpg" alt="feature # for Jacobs (right angle)" width="300px">
-           <figcaption>feature # for Jacobs (right angle)</figcaption>
+           <img src="images/jacobs23-feature10.JPG" alt="feature 10 for Jacobs" width="600px">
+           <figcaption>feature 10 for Jacobs</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+           <img src="images/jacobs23-feature11.JPG" alt="feature 11 for Jacobs" width="600px">
+           <figcaption>feature 11 for Jacobs</figcaption>
+        </td>
+        <td style="text-align: center;">
+           <img src="images/jacobs23-feature12.JPG" alt="feature 12 for Jacobs" width="600px">
+           <figcaption>feature 12 for Jacobs</figcaption>
         </td>
       </tr>
     </table>
   </div>
 
   <h3>Part B.4: RANSAC for Robust Homography</h3>
-  <p></p>
+  <p>Given tentative matches, I run RANSAC: repeatedly sample 4 correspondences, compute a candidate \(H\), and count inliers whose transfer error is below a pixel threshold. After a fixed number of iterations (or early stopping when inliers stabilize), I refit \(H\) to all inliers and use it for warping and mosaicing. The side-by-side results below compare the manual mosaics from Part A against the automatic pipeline.</p>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
         <td style="text-align: center;">
-           <img src="images/bookcase-mosaic.jpg" alt="Cory bookcase mosaic (manual)" width="600px">
+           <img src="images/bookcase-mosaic.JPG" alt="Cory bookcase mosaic (manual)" width="600px">
            <figcaption>Cory bookcase mosaic (manual)</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/bookcase-auto-mosaic.jpg" alt="Cory bookcase mosaic (auto-stitched)" width="600px">
+           <img src="images/bookcase23-auto.JPG" alt="Cory bookcase mosaic (auto-stitched)" width="600px">
            <figcaption>Cory bookcase mosaic (auto-stitched)</figcaption>
         </td>
       </tr>
       <tr>
         <td style="text-align: center;">
-           <img src="images/lab-mosaic.jpg" alt="Cory lab mosaic (manual)" width="600px">
+           <img src="images/lab-mosaic.JPG" alt="Cory lab mosaic (manual)" width="600px">
            <figcaption>Cory lab mosaic (manual)</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/lab-auto-mosaic.jpg" alt="Cory lab mosaic (auto-stitched)" width="600px">
+           <img src="images/lab23-auto.JPG" alt="Cory lab mosaic (auto-stitched)" width="600px">
            <figcaption>Cory lab mosaic (auto-stitched)</figcaption>
         </td>
       </tr>
       <tr>
         <td style="text-align: center;">
-           <img src="images/jacobs-mosaic.jpg" alt="Jacobs mosaic (manual)" width="600px">
+           <img src="images/jacobs-mosaic.JPG" alt="Jacobs mosaic (manual)" width="600px">
            <figcaption>Jacobs mosaic (manual)</figcaption>
         </td>
         <td style="text-align: center;">
-           <img src="images/jacobs-auto-mosaic.jpg" alt="Jacobs mosaic (auto-stitched)" width="600px">
+           <img src="images/jacobs12-auto.JPG" alt="Jacobs mosaic (auto-stitched)" width="600px">
            <figcaption>Jacobs mosaic (auto-stitched)</figcaption>
         </td>
       </tr>
