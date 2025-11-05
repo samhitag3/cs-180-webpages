@@ -356,14 +356,19 @@
   <h2>Part B: FEATURE MATCHING for AUTOSTITCHING</h2>
 
   <h3>Part B.1: Harris Corner Detection</h3>
-  <p>Following the spec, I detect corners using the Harris response (second-moment matrix and its eigenvalues). I visualize detected corners before and after Adaptive Non-Maximal Suppression (ANMS) to ensure a good spatial spread across the image, which helps robust matching.</p>
+  <!-- <p>Following the spec, I detect corners using the Harris response (second-moment matrix and its eigenvalues). I visualize detected corners before and after Adaptive Non-Maximal Suppression (ANMS) to ensure a good spatial spread across the image, which helps robust matching.</p> -->
+<p>Following the spec, I detect corners using the Harris response (second-moment matrix and its eigenvalues).</p>
 
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
-        <td style="text-align: center;">
+        <!-- <td style="text-align: center;">
            <img src="images/bookcase2-corners-noANMS.JPG" alt="Harris Corners (no ANMS) for Cory bookcase, center angle" width="600px">
            <figcaption>Harris Corners (no ANMS) for Cory bookcase, center angle</figcaption>
+        </td> -->
+        <td style="text-align: center;">
+           <img src="images/bookcase2-corners-noANMS.JPG" alt="Harris Corners for Cory bookcase, center angle" width="600px">
+           <figcaption>Harris Corners for Cory bookcase, center angle</figcaption>
         </td>
         <!-- <td style="text-align: center;">
            <img src="images/bookcase2-corners-wANMS.JPG" alt="Harris Corners (w ANMS) for Cory bookcase, center angle" width="600px">
@@ -376,9 +381,13 @@
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
-        <td style="text-align: center;">
+        <!-- <td style="text-align: center;">
            <img src="images/lab2-corners-noANMS.JPG" alt="Harris Corners (no ANMS) for Cory lab, center angle" width="600px">
            <figcaption>Harris Corners (no ANMS) for Cory lab, center angle</figcaption>
+        </td> -->
+        <td style="text-align: center;">
+           <img src="images/lab2-corners-noANMS.JPG" alt="Harris Corners for Cory lab, center angle" width="600px">
+           <figcaption>Harris Corners for Cory lab, center angle</figcaption>
         </td>
         <!-- <td style="text-align: center;">
            <img src="images/lab2-corners-wANMS.JPG" alt="Harris Corners (w ANMS) for Cory lab, center angle" width="600px">
@@ -391,9 +400,13 @@
   <div style="display: flex; flex-direction: column; align-items: center;">
     <table style="width: 100%; text-align: center; border-collapse: collapse;">
       <tr>
-        <td style="text-align: center;">
+        <!-- <td style="text-align: center;">
            <img src="images/jacobs2-corners-noANMS.JPG" alt="Harris Corners (no ANMS) for Jacobs, center angle" width="600px">
            <figcaption>Harris Corners (no ANMS) for Jacobs, center angle</figcaption>
+        </td> -->
+        <td style="text-align: center;">
+           <img src="images/jacobs2-corners-noANMS.JPG" alt="Harris Corners for Jacobs, center angle" width="600px">
+           <figcaption>Harris Corners for Jacobs, center angle</figcaption>
         </td>
         <!-- <td style="text-align: center;">
            <img src="images/jacobs2-corners-wANMS.JPG" alt="Harris Corners (w ANMS) for Cory lab, center angle" width="600px">
