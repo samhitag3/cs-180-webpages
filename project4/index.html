@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS180 Project 4</title>
+  <!-- MathJax for formulas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; line-height: 1.55; }
+    header, main, footer { max-width: 980px; margin: 0 auto; padding: 24px 16px; }
+    header h1 { margin: 0 0 8px; }
+    h2 { margin-top: 40px; }
+    figure { margin: 16px 0; text-align: center; }
+    figcaption { font-size: 0.9rem; opacity: 0.8; }
+    code, pre { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+    .thumb { width: 100%; height: auto; }
+    .small { max-width: 680px; margin: 0 auto; }
+    .note { background: #fffbe6; border: 1px solid #ffe58f; padding: 10px 12px; border-radius: 6px; }
+    .muted { opacity: 0.8; }
+    .equ { background: #fbfbff; border: 1px dashed #dfe3ff; padding: 8px 10px; border-radius: 6px; }
+    video { max-width: 100%; height: auto; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Project 4: Neural Radiance Fields</h1>
+  <p class="muted">Course: CS180 • <em>Samhita Ghosh</em> • Fall 2025</p>
+</header>
+
+<main>
+  <h2>Overview</h2>
+  <p>
+    In this project I implemented a full NeRF-style pipeline, starting from phone camera calibration
+    and 3D pose estimation, and ending with neural fields that render novel views of both the provided
+    Lego dataset and my own captured object.
+
+  <h2>Part 0: Data Capture and Camera Calibration</h2>
+
+  <h3>Part 0.1: ArUco Camera Calibration</h3>
+  <p>
+    I began by calibrating my phone camera using the provided ArUco board. I took multiple photos of the
+    board from different orientations and positions, making sure the tag grid covered most of the frame
+    and was not always centered. For each image, I used <code>cv2.aruco</code> to detect tags, recovered
+    the 3D corner locations using the known tag layout, and called <code>cv2.calibrateCamera</code> to estimate:
+  </p>
+  <ul>
+    <li>The intrinsic matrix \(K\) (focal lengths and principal point).</li>
+    <li>Lens distortion coefficients \((k_1,k_2,p_1,p_2,k_3)\).</li>
+    <li>Per-image extrinsics \((R_i, t_i)\).</li>
+  </ul>
+
+  <p>
+      Conceptually, I solve for \(K\) and distortion parameters so that reprojected corners
+      \(\hat{\mathbf{u}} = \Pi(K, R_i, t_i, \mathbf{X})\) are as close as possible to the detected image corners
+      \(\mathbf{u}\), minimizing the reprojection error:
+      \[
+        \frac{1}{N}\sum_i \|\mathbf{u}_i - \hat{\mathbf{u}}_i\|^2.
+      \]
+      These intrinsics are reused when building rays for my custom object.
+    </p>
+
+  <h3>Part 0.2: Scanning My Object and Estimating Poses</h3>
+  <p>
+    For my own NeRF dataset, I chose a small object (my hirono) and captured a sequence of images
+    by walking around it while roughly keeping it centered in the frame. I used the same calibrated intrinsics
+    and applied a PnP-style solve with ArUco tags to estimate a camera-to-world transform for each image.
+  </p>
+
+  <h3>Part 0.3: Visualizing Poses in Viser</h3>
+  <p>
+    To sanity check calibration and pose estimation, I visualized the camera frustums and the board/object
+    geometry with <code>viser</code>. 
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td>
+          <img src="images/hirono-viser-overview.png" alt="Viser overview: camera ring" width="400px">
+          <figcaption>Viser: global view of all cameras around my object.</figcaption>
+        </td>
+        <td>
+          <img src="images/hirono-viser-closeup.png" alt="Viser closeup" width="400px">
+          <figcaption>Close-up showing consistent orientation and object location.</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>Part 0.4: Building a NeRF-Ready Dataset</h3>
+  <p>
+    Finally, I undistorted and downsampled my images and packed everything into a single
+    <code>hirono_dataset.npz</code> file. The script:
+  </p>
+  <ul>
+    <li>Loads <code>calibration_results_aruco.npz</code> and <code>object_scan_poses.json</code>.</li>
+    <li>Undistorts each image using <code>K</code> and the distortion coefficients.</li>
+    <li>Downsamples to a smaller resolution (e.g. \(H=75, W=100\)) and rescales \(K\) accordingly.</li>
+    <li>Splits images into train / val / test with an 80/10/10 ratio.</li>
+  </ul>
+
+  <h2>Part 1: Fitting a 2D Neural Field</h2>
+
+  <h3>Part 1.1: Coordinate Parameterization and Architecture</h3>
+  <p>
+    Before going 3D, I implemented a 2D neural field that models a single RGB image. Each pixel is
+    represented by its normalized coordinates \((x/W, y/H)\) in \([0,1]^2\).
+  </p>
+  <p>
+    I pass these 2D coordinates through a sinusoidal positional encoding (SPE) module with
+    <code>num_freqs = 10</code>. The encoder concatenates the raw coordinates with sine and cosine
+    features at exponentially increasing frequencies:
+  </p>
+    <p>
+      For \(x\in\mathbb{R}^2\),
+      \[
+        \gamma(x) = \big[x,\; \sin(2^0\pi x),\cos(2^0\pi x),\dots,
+        \sin(2^{L-1}\pi x),\cos(2^{L-1}\pi x)\big],
+      \]
+      so the MLP sees both low- and high-frequency information.
+    </p>
+  <p>
+    The MLP architecture (class <code>MLP</code>) is:
+  </p>
+  <ul>
+    <li>Input: SPE-encoded 2D coordinate (e.g. 42D when \(L=10\)).</li>
+    <li>3 hidden layers, each <code>hidden_size = 256</code> with ReLU activations.</li>
+    <li>Final linear layer to 3 channels, followed by <code>Sigmoid</code> to keep RGB in \([0,1]\).</li>
+  </ul>
+
+  <h3>Part 1.2: Training on the Provided Test Image</h3>
+  <p>
+    I first trained on the provided test image <code>images/waffle.JPG</code>, using a dataloader
+    that samples pixel/color pairs and mean squared error as the loss:
+  </p>
+
+    <p>
+      \[
+        \mathcal{L} = \frac{1}{N}\sum_{i}\|\hat{\mathbf{c}}_i - \mathbf{c}_i\|^2,\qquad
+        \text{PSNR} = -10 \log_{10}(\mathcal{L}).
+      \]
+    </p>
+
+
+  <p>
+    Below is the reconstruction progression for <code>run_name = "testimg_nf10_w256"</code> at different iterations:
+  </p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <th>Original</th>
+        <th>Iter 10</th>
+        <th>Iter 100</th>
+        <th>Iter 500</th>
+        <th>Iter 1000</th>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/waffle.JPG" alt="Original waffle image" width="180px">
+        </td>
+        <td>
+          <img src="images/testimg_nf10_w256_iter10.png" alt="Reconstruction at iter 10" width="180px">
+        </td>
+        <td>
+          <img src="images/testimg_nf10_w256_iter100.png" alt="Reconstruction at iter 100" width="180px">
+        </td>
+        <td>
+          <img src="images/testimg_nf10_w256_iter500.png" alt="Reconstruction at iter 500" width="180px">
+        </td>
+        <td>
+          <img src="images/testimg_nf10_w256_iter1000.png" alt="Reconstruction at iter 1000" width="180px">
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <p class="small muted">
+    The model quickly captures global colors and smooth structures, and then gradually sharpens edges
+    and small textures as training continues.
+  </p>
+
+  <div class="small">
+    <figure>
+      <img src="images/testimg_nf10_w256_psnr_curve.png" alt="PSNR vs iteration for waffle image" class="thumb">
+      <figcaption>PSNR vs iteration for <code>testimg_nf10_w256</code>.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Part 1.3: Hyperparameter Effects on My Own Image</h3>
+  <p>
+    I repeated the experiment on my own image <code>images/fox.jpg</code> and ran a small hyperparameter sweep
+    over the number of frequencies and MLP width:
+  </p>
+  <ul>
+    <li><code>freq_list = [2, 10]</code></li>
+    <li><code>width_list = [64, 256]</code></li>
+  </ul>
+  <p>
+    For each combination, I ran <code>train_on_image_fast</code> for 1000 iterations with
+    <code>run_name = "fox_nf{nf}_w{w}"</code> and saved final reconstructions
+    <code>{run_name}_final.png</code>.
+  </p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <th></th>
+        <th>width = 64</th>
+        <th>width = 256</th>
+      </tr>
+      <tr>
+        <th>freqs = 2</th>
+        <td>
+          <img src="images/fox_nf2_w64_final.png" alt="fox nf2 w64" width="220px">
+          <figcaption>Low freq, narrow network.</figcaption>
+        </td>
+        <td>
+          <img src="images/fox_nf2_w256_final.png" alt="fox nf2 w256" width="220px">
+          <figcaption>Low freq, wide network.</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <th>freqs = 10</th>
+        <td>
+          <img src="images/fox_nf10_w64_final.png" alt="fox nf10 w64" width="220px">
+          <figcaption>High freq, narrow network.</figcaption>
+        </td>
+        <td>
+          <img src="images/fox_nf10_w256_final.png" alt="fox nf10 w256" width="220px">
+          <figcaption>High freq, wide network.</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="small">
+    <figure>
+      <img src="images/fox_nf10_w256_psnr_curve.png" alt="PSNR curve for fox_nf10_w256" class="thumb">
+      <figcaption>PSNR vs iteration for the best model (<code>fox_nf10_w256</code>).</figcaption>
+    </figure>
+  </div>
+
+  <p class="small muted">
+    Increasing the number of frequencies enables sharper edges and finer detail, while a wider MLP improves
+    capacity and reduces artifacts. Too low a frequency budget essentially acts like a strong low-pass filter.
+  </p>
+
+  <h2>Part 2: NeRF on the Lego Dataset</h2>
+
+  <h3>Part 2.1: From Pixels to Rays</h3>
+  <p>
+    The NeRF part uses the provided <code>lego_200x200.npz</code> dataset. I first load images and
+    camera poses:
+  </p>
+  <pre><code>
+data = np.load("lego_200x200.npz")
+images_train = data["images_train"] / 255.0
+c2ws_train = data["c2ws_train"]
+images_val = data["images_val"] / 255.0
+c2ws_val = data["c2ws_val"]
+focal = float(data["focal"])</code></pre>
+
+  <p>
+    I construct a shared intrinsic matrix
+    \[
+      K =
+      \begin{bmatrix}
+        f & 0 & W/2 \\
+        0 & f & H/2 \\
+        0 & 0 & 1
+      \end{bmatrix}
+    \]
+    and convert pixels to rays with a <code>pixel_to_ray</code> helper:
+  </p>
+
+
+    <p>
+      Given pixel coordinates \((u,v)\), I form normalized camera coordinates
+      \(\mathbf{x}_c = K^{-1}[u,v,1]^\top\), normalize to a direction, and transform from camera
+      to world with \(c2w\). This yields a world-space ray origin \(\mathbf{o}\) and direction
+      \(\mathbf{d}\) for each pixel.
+    </p>
+
+
+  <p>
+    A <code>RaysData</code> class precomputes all rays and flattens them into arrays so I can sample
+    random subsets during training:
+  </p>
+  <pre><code>dataset = RaysData(images_train, K, c2ws_train)
+rays_o, rays_d, pixels = dataset.sample_rays(batch_size)</code></pre>
+
+  <h3>Part 2.2: Sampling Points and Volume Rendering</h3>
+  <p>
+    Along each ray, I sample a fixed number of points between near and far planes using
+    stratified sampling:
+  </p>
+  <pre><code>pts, t_vals = sample_points_on_rays(
+    rays_o, rays_d,
+    near=2.0, far=6.0,
+    n_samples=64,
+    perturb=True
+)</code></pre>
+  <p>
+    For each sampled 3D point \(\mathbf{x}\) and viewing direction \(\mathbf{d}\), the NeRF MLP
+    predicts density \(\sigma\) and color \(\mathbf{c}\). I then perform standard alpha compositing
+    along the ray:
+  </p>
+
+    <p>
+      \[
+        C(\mathbf{r}) = \sum_{i} T_i \alpha_i \mathbf{c}_i,\quad
+        T_i = \prod_{j&lt;i}(1 - \alpha_j),\quad
+        \alpha_i = 1 - \exp(-\sigma_i \Delta t_i).
+      \]
+    </p>
+
+
+  <p>
+    The NeRF network (<code>NeRFMLP</code>) uses positional encoding on both positions and directions:
+  </p>
+  <ul>
+    <li>Position encoding: <code>PositionalEncoding(in_dims=3, num_freqs=10)</code>.</li>
+    <li>Direction encoding: <code>PositionalEncoding(in_dims=3, num_freqs=4)</code>.</li>
+    <li>Density branch: several fully-connected layers from encoded position to \(\sigma\).</li>
+    <li>Color branch: combines a learned feature vector with encoded direction to predict RGB via <code>sigmoid</code>.</li>
+  </ul>
+
+  <h3>Part 2.3: Training and Validation</h3>
+  <p>
+    I precompute all training rays with <code>precompute_train_rays_global</code> and then
+    train with mini-batches:
+  </p>
+  <pre><code>N_iters = 1000
+N_rays_per_step = 10000
+near, far = 2.0, 6.0
+n_samples = 64
+
+model = NeRFMLP(pos_num_freqs=10, dir_num_freqs=4, hidden_dim=256).to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)</code></pre>
+
+  <p>
+    Every few iterations I render a full training and validation image to monitor visual quality
+    and PSNR.
+  </p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <th>Ground Truth (Train)</th>
+        <th>Reconstruction (Train)</th>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/lego_train_gt.png" alt="Lego train GT" width="350px">
+        </td>
+        <td>
+          <img src="images/lego_train_pred.png" alt="Lego train reconstruction" width="350px">
+        </td>
+      </tr>
+      <tr>
+        <th>Ground Truth (Val)</th>
+        <th>Reconstruction (Val)</th>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/lego_val_gt.png" alt="Lego val GT" width="350px">
+        </td>
+        <td>
+          <img src="images/lego_val_pred.png" alt="Lego val reconstruction" width="350px">
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="small">
+    <figure>
+      <img src="images/lego_training_psnr_curve.png" alt="Lego PSNR curve" class="thumb">
+      <figcaption>PSNR vs iteration for the Lego NeRF training.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Part 2.4: Novel View Synthesis</h3>
+  <p>
+    With the trained Lego NeRF, I render a 360° orbit of views around the object by interpolating
+    camera poses along a spherical path. Frames are saved and written to an MP4.
+  </p>
+
+  <div class="small">
+    <figure>
+      <video controls>
+        <source src="images/lego_spherical.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+      <figcaption>Spherical orbit of novel Lego views rendered by my NeRF.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Part 2.6: NeRF on My Own Captured Object (Training with My Own Data)</h2>
+
+  <h3>Part 2.6.1: Dataset and Rays</h3>
+  <p>
+    For my own object, I load <code>hirono_dataset.npz</code>, which has the same structure as the Lego
+    dataset but with my images and poses. I reuse the same <code>RaysData</code> and
+    <code>pixel_to_ray</code> utilities:
+  </p>
+  <pre><code>data_obj = np.load("hirono_dataset.npz")
+images_train = data_obj["images_train"]
+c2ws_train = data_obj["c2ws_train"]
+K_obj = data_obj["K"]
+
+dataset_obj = RaysData(images_train, K_obj, c2ws_train)</code></pre>
+
+  <p>
+    I set near and far planes to tightly bracket my object based on sample rays and then sample
+    points with <code>sample_points_on_rays</code> just like in the Lego case.
+  </p>
+
+  <h3>Part 2.6.2: Training and View Reconstruction</h3>
+  <p>
+    I reuse the same <code>NeRFMLP</code> architecture and training loop (learning rate, number of
+    iterations, and samples per ray) but on my smaller dataset. Below, I compare a training view and
+    a held-out validation view:
+  </p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <th>Train GT</th>
+        <th>Train Reconstruction</th>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/hirono_train_gt.png" alt="hirono training ground truth" width="300px">
+        </td>
+        <td>
+          <img src="images/hirono_train_pred.png" alt="hirono training reconstruction" width="300px">
+        </td>
+      </tr>
+      <tr>
+        <th>Val GT</th>
+        <th>Val Reconstruction</th>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/hirono_val_gt.png" alt="hirono validation ground truth" width="300px">
+        </td>
+        <td>
+          <img src="images/hirono_val_pred.png" alt="hirono validation reconstruction" width="300px">
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="small">
+    <figure>
+      <img src="images/hirono_psnr_curve.png" alt="PSNR curve for hirono NeRF" class="thumb">
+      <figcaption>PSNR curve for my custom object NeRF.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Part 2.6.3: Orbit Rendering of My Object</h3>
+  <p>
+    Finally, I generate an orbit around my object using a ring of test poses. After rendering each
+    frame with the trained NeRF, I pack them into a GIF:
+  </p>
+  <div class="small">
+    <figure>
+      <img src="images/my_object_orbit.gif" alt="Orbit GIF around my object" class="thumb">
+      <figcaption>Orbit animation rendered from my custom NeRF (<code>my_object_orbit.gif</code>).</figcaption>
+    </figure>
+  </div>
+
+</main>
+
+</body>
+</html>
