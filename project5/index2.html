@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS180 Project 5: Diffusion Models</title>
+
+  <!-- MathJax for formulas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; line-height: 1.55; }
+    header, main, footer { max-width: 980px; margin: 0 auto; padding: 24px 16px; }
+    header h1 { margin: 0 0 8px; }
+    h2 { margin-top: 40px; }
+    figure { margin: 16px 0; text-align: center; }
+    figcaption { font-size: 0.9rem; opacity: 0.8; }
+    code, pre { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+    .thumb { width: 100%; height: auto; }
+    .note { background: #fffbe6; border: 1px solid #ffe58f; padding: 10px 12px; border-radius: 6px; }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>Project 5: Diffusion Models</h1>
+  <p>Course: CS180 • <em>Samhita Ghosh</em> • Fall 2025</p>
+</header>
+
+<main>
+    <h2>Overview</h2>
+    <p>
+      In this project, I explored diffusion models in two stages:
+      (A) using a pretrained DeepFloyd IF model to implement diffusion procedures like forward noising, iterative denoising,
+      sampling, CFG, image editing, and inpainting and
+      (B) training my own UNet‑based flow matching model on MNIST, adding time conditioning and class conditioning.
+    </p>
+
+    <h2>Part A — The Power of Diffusion Models!</h2>
+
+      <h3>0. Setup & Prompting</h3>
+      <p >
+        DeepFloyd IF is a text‑to‑image diffusion model. The prompts are first converted into embeddings, then the model samples from noise to generate images.
+        I experimented with custom prompts and different <code>num_inference_steps</code> to see the quality/speed tradeoff.
+      </p>
+      <div class="note small">
+        <strong>TODO (if needed):</strong> Add your prompt‑based generations here (e.g., a small grid for 3–6 prompts × {20, 100} steps).
+      </div>
+
+
+      <h3>1.1 Implementing the Forward Process</h3>
+      <p>
+        The forward diffusion process adds noise to a clean image \(x_0\) to produce \(x_t\):
+        \[
+          x_t = \sqrt{\bar\alpha_t}x_0 + \sqrt{1-\bar\alpha_t}\,\epsilon, \quad \epsilon\sim\mathcal{N}(0, I).
+        \]
+        Below are the Campanile at noise levels \(t \in \{250, 500, 750\}\).
+      </p>
+
+      <div class="grid grid-3">
+        <figure>
+          <img class="thumb" src="images/parta/forward_noisy_t=250.JPG" alt="Noisy Campanile at t=250">
+          <figcaption>Noisy Campanile @ <code>t=250</code></figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/parta/forward_noisy_t=500.JPG" alt="Noisy Campanile at t=500">
+          <figcaption>Noisy Campanile @ <code>t=500</code></figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/parta/forward_noisy_t=750.JPG" alt="Noisy Campanile at t=750">
+          <figcaption>Noisy Campanile @ <code>t=750</code></figcaption>
+        </figure>
+      </div>
+
+
+      <h3>1.2 Classical Denoising (Gaussian Blur Baseline)</h3>
+      <p>
+        As a baseline, I tried to denoise using classical Gaussian blur filtering. As expected, heavy noise destroys structure that a simple blur cannot recover.
+      </p>
+
+      <div class="grid grid-3">
+        <figure>
+          <img class="thumb" src="images/parta/classical_noisy_t=250.JPG" alt="Classical: noisy t=250">
+          <figcaption>Input (noisy) @ <code>t=250</code></figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/parta/classical_noisy_t=500.JPG" alt="Classical: noisy t=500">
+          <figcaption>Input (noisy) @ <code>t=500</code></figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/parta/classical_noisy_t=750.JPG" alt="Classical: noisy t=750">
+          <figcaption>Input (noisy) @ <code>t=750</code></figcaption>
+        </figure>
+
+        <figure>
+          <img class="thumb" src="images/parta/classical_denoised_t=250.JPG" alt="Classical: denoised t=250">
+          <figcaption>Gaussian‑denoised @ <code>t=250</code></figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/parta/classical_denoised_t=500.JPG" alt="Classical: denoised t=500">
+          <figcaption>Gaussian‑denoised @ <code>t=500</code></figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/parta/classical_denoised_t=750.JPG" alt="Classical: denoised t=750">
+          <figcaption>Gaussian‑denoised @ <code>t=750</code></figcaption>
+        </figure>
+      </div>
+
+      <h3>1.3 One‑Step Denoising (Pretrained UNet)</h3>
+      <p>
+        The pretrained UNet predicts the noise \(\epsilon\) in \(x_t\). A single‑step estimate of the clean image can be computed as:
+        \[
+          \hat x_0 = \frac{x_t - \sqrt{1-\bar\alpha_t}\,\hat\epsilon}{\sqrt{\bar\alpha_t}}.
+        \]
+        I visualize the original, noisy, and one‑step denoised results for \(t \in \{250, 500, 750\}\).
+      </p>
+
+      <h4>t = 250</h4>
+      <div class="grid grid-3">
+        <figure><img class="thumb" src="images/parta/one_step_original_t=250.JPG" alt="Original campanile (t=250 set)"><figcaption>Original</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/one_step_noisy_t=250.JPG" alt="Noisy campanile t=250"><figcaption>Noisy @ <code>t=250</code></figcaption></figure>
+        <figure><img class="thumb" src="images/parta/one_step_denoised_t=250.JPG" alt="One-step denoised t=250"><figcaption>One‑step denoised</figcaption></figure>
+      </div>
+
+      <h4>t = 500</h4>
+      <div class="grid grid-3">
+        <figure><img class="thumb" src="images/parta/one_step_original_t=500.JPG" alt="Original campanile (t=500 set)"><figcaption>Original</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/one_step_noisy_t=500.JPG" alt="Noisy campanile t=500"><figcaption>Noisy @ <code>t=500</code></figcaption></figure>
+        <figure><img class="thumb" src="images/parta/one_step_denoised_t=500.JPG" alt="One-step denoised t=500"><figcaption>One‑step denoised</figcaption></figure>
+      </div>
+
+      <h4>t = 750</h4>
+      <div class="grid grid-3">
+        <figure><img class="thumb" src="images/parta/one_step_original_t=750.JPG" alt="Original campanile (t=750 set)"><figcaption>Original</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/one_step_noisy_t=750.JPG" alt="Noisy campanile t=750"><figcaption>Noisy @ <code>t=750</code></figcaption></figure>
+        <figure><img class="thumb" src="images/parta/one_step_denoised_t=750.JPG" alt="One-step denoised t=750"><figcaption>One‑step denoised</figcaption></figure>
+      </div>
+
+      <h3>1.4 Iterative Denoising</h3>
+      <p>
+        One‑step denoising is coarse at high noise. Iterative denoising gradually refines predictions along a (strided) timestep schedule,
+        producing much better reconstructions.
+      </p>
+      <div class="note small">
+        <strong>TODO (if needed):</strong> Add your iterative denoising progression grid (e.g., iteration 0/5/10/15/20 and final).
+      </div>
+
+      <h3>1.5 Diffusion Model Sampling (Starting from Pure Noise)</h3>
+      <p>
+        With the denoising loop implemented, I generated samples starting from random Gaussian noise using the prompt
+        <code>"a high quality photo"</code>.
+      </p>
+
+      <div class="grid grid-5">
+        <figure><img class="thumb" src="images/parta/random_denoise_1.JPG" alt="Sample 1 without CFG"><figcaption>Sample 1</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/random_denoise_2.JPG" alt="Sample 2 without CFG"><figcaption>Sample 2</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/random_denoise_3.JPG" alt="Sample 3 without CFG"><figcaption>Sample 3</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/random_denoise_4.JPG" alt="Sample 4 without CFG"><figcaption>Sample 4</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/random_denoise_5.JPG" alt="Sample 5 without CFG"><figcaption>Sample 5</figcaption></figure>
+      </div>
+
+      <h3>1.6 Classifier‑Free Guidance (CFG)</h3>
+      <p>
+        CFG improves sample quality by combining conditional and unconditional predictions:
+        \[
+          \epsilon = \epsilon_{\text{uncond}} + \gamma(\epsilon_{\text{cond}} - \epsilon_{\text{uncond}}).
+        \]
+        Below are 5 samples generated with CFG (higher fidelity / stronger prompt adherence).
+      </p>
+
+      <div class="grid grid-5">
+        <figure><img class="thumb" src="images/parta/classifier_free_denoise_1.JPG" alt="Sample 1 with CFG"><figcaption>Sample 1 (CFG)</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/classifier_free_denoise_2.JPG" alt="Sample 2 with CFG"><figcaption>Sample 2 (CFG)</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/classifier_free_denoise_3.JPG" alt="Sample 3 with CFG"><figcaption>Sample 3 (CFG)</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/classifier_free_denoise_4.JPG" alt="Sample 4 with CFG"><figcaption>Sample 4 (CFG)</figcaption></figure>
+        <figure><img class="thumb" src="images/parta/classifier_free_denoise_5.JPG" alt="Sample 5 with CFG"><figcaption>Sample 5 (CFG)</figcaption></figure>
+      </div>
+ 
+      <h3>1.7 Image‑to‑Image Translation (SDEdit) + Inpainting</h3>
+      <p>
+        Image‑to‑image editing works by adding controlled noise to a source image and denoising it back, allowing the model to “hallucinate”
+        plausible content. Below are edits of the Campanile with different starting noise levels (<code>i_start</code>).
+      </p>
+
+      <h4>Campanile edits across noise levels</h4>
+      <div class="grid grid-3">
+        <figure><img class="thumb" src="images/parta/173image_1.JPG" alt="Campanile edit i_start=1"><figcaption><code>i_start=1</code></figcaption></figure>
+        <figure><img class="thumb" src="images/parta/173image_3.JPG" alt="Campanile edit i_start=3"><figcaption><code>i_start=3</code></figcaption></figure>
+        <figure><img class="thumb" src="images/parta/173image_5.JPG" alt="Campanile edit i_start=5"><figcaption><code>i_start=5</code></figcaption></figure>
+        <figure><img class="thumb" src="images/parta/173image_7.JPG" alt="Campanile edit i_start=7"><figcaption><code>i_start=7</code></figcaption></figure>
+        <figure><img class="thumb" src="images/parta/173image_10.JPG" alt="Campanile edit i_start=10"><figcaption><code>i_start=10</code></figcaption></figure>
+        <figure><img class="thumb" src="images/parta/173image_20.JPG" alt="Campanile edit i_start=20"><figcaption><code>i_start=20</code></figcaption></figure>
+      </div>
+
+      <h4>Text‑conditional image‑to‑image (example)</h4>
+      <div class="grid grid-2">
+        <figure>
+          <img class="thumb" src="images/parta/image_to_image_5.JPG" alt="Text-conditional image-to-image result">
+          <figcaption>Example text‑conditional image‑to‑image result</figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/parta/inpainted_campinile.JPG" alt="Inpainted Campanile result">
+          <figcaption>Inpainting result (Campanile)</figcaption>
+        </figure>
+      </div>
+
+      <div class="note small">
+        <strong>TODO (if needed):</strong> Add your “1 web image” + “2 hand‑drawn images” SDEdit results and your “2 own images inpainted” results
+        (per spec).
+      </div>
+
+      <h3>1.8 Visual Anagrams</h3>
+      <p>
+        Visual anagrams are optical‑illusion style generations where one image can be interpreted as two different prompts (e.g., upright vs. flipped).
+      </p>
+      <div class="note small">
+        <strong>TODO:</strong> Insert your visual anagram results here (recommended: 2–4 examples with captions describing the paired prompts).
+      </div>
+
+      <h3>1.9 Hybrid Images</h3>
+      <p>
+        Hybrid diffusion images combine low‑frequency structure from one prompt with high‑frequency details from another, producing different perceptions at different viewing scales.
+      </p>
+      <div class="note small">
+        <strong>TODO:</strong> Insert your hybrid image results here (recommended: show the hybrid plus the two sources / frequency breakdown if you saved them).
+      </div>
+    <h2>Part B — Flow Matching from Scratch!</h2>
+    <p>
+      In Part B, I trained a UNet to learn denoising/flow matching on MNIST. I started with an unconditional one‑step denoiser,
+      then added time conditioning, and finally added class conditioning (with classifier‑free guidance).
+    </p>
+
+      <h3>1.2 Noising Process</h3>
+      <p>
+        Training data is generated by adding noise \(z = x + \sigma\epsilon\), where \(\epsilon\sim\mathcal{N}(0,I)\).
+        Below is a visualization of the noising process across different \(\sigma\) values.
+      </p>
+      <div class="grid">
+        <figure>
+          <img class="thumb" src="images/partb/12output.png" alt="Noising process visualization">
+          <figcaption>Noising process visualization</figcaption>
+        </figure>
+      </div>
+
+      <h3>1.2.1 Training a Single‑Step Denoiser</h3>
+      <p>
+        I trained an unconditional UNet denoiser on MNIST with \(\sigma=0.5\) and an L2 loss, and visualized both the training loss curve and qualitative results.
+      </p>
+      <div class="grid grid-2">
+        <figure>
+          <img class="thumb" src="images/partb/121output.png" alt="Training loss curve for unconditional denoiser">
+          <figcaption>Training loss curve</figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/partb/122output.png" alt="Sample denoising results after epoch 1 and 5">
+          <figcaption>Sample denoising results (after epoch 1 and epoch 5)</figcaption>
+        </figure>
+      </div>
+
+      <h3>1.2.2 Out‑of‑Distribution Testing</h3>
+      <p>
+        After training on \(\sigma=0.5\), I evaluated the denoiser on the same digit with different noise levels \(\sigma\in\{0.0,0.2,0.4,0.5,0.6,0.8,1.0\}\).
+      </p>
+      <div class="grid">
+        <figure>
+          <img class="thumb" src="images/partb/123output.png" alt="Out-of-distribution denoising across different sigmas">
+          <figcaption>Out‑of‑distribution denoising (varying \(\sigma\))</figcaption>
+        </figure>
+      </div>
+
+      <h3>1.2.3 Denoising Pure Noise</h3>
+      <p>
+        To make denoising generative, I trained the network to denoise pure Gaussian noise (starting from \(z=\epsilon\)).
+        Below are the loss curve and sample results (plus a short note about patterns in the outputs).
+      </p>
+      <div class="note small">
+        <strong>TODO:</strong> Replace the placeholders below with your saved images (loss curve + epoch 1/5 samples), and add 2–4 sentences describing the patterns you observed.
+      </div>
+      <div class="grid grid-2" style="margin-top: 12px;">
+        <figure>
+          <img class="thumb" src="images/partb/122output.png" alt="(Placeholder) Loss curve for pure-noise denoiser">
+          <figcaption><em>Placeholder:</em> pure‑noise training loss curve</figcaption>
+        </figure>
+        <figure>
+          <img class="thumb" src="images/partb/123output.png" alt="(Placeholder) Pure-noise denoising samples">
+          <figcaption><em>Placeholder:</em> pure‑noise samples (epoch 1 and 5)</figcaption>
+        </figure>
+      </div>
+      <h3>2.2 Training a Time‑Conditioned UNet</h3>
+      <p>
+        Next, I trained a time‑conditioned UNet with an embedding of \(t\) (normalized to \([0,1]\)) and used an Adam optimizer with exponential LR decay.
+      </p>
+      <div class="grid">
+        <figure>
+          <img class="thumb" src="images/partb/22output.png" alt="Training loss curve for time-conditioned UNet">
+          <figcaption>Training loss curve (time‑conditioned UNet)</figcaption>
+        </figure>
+      </div>
+
+      <h3>2.3 Sampling from the Time‑Conditioned UNet</h3>
+      <p>
+        Using Algorithm B.2, I sampled digits by iterative denoising from noise. Below are samples after training for 1, 5, and 10 epochs.
+      </p>
+
+      <div class="grid grid-3">
+        <figure><img class="thumb" src="images/partb/23output-epoch1.png" alt="Sampling results after 1 epoch (time-conditioned)"><figcaption>Epoch 1</figcaption></figure>
+        <figure><img class="thumb" src="images/partb/23output-epoch5.png" alt="Sampling results after 5 epochs (time-conditioned)"><figcaption>Epoch 5</figcaption></figure>
+        <figure><img class="thumb" src="images/partb/23output-epoch10.png" alt="Sampling results after 10 epochs (time-conditioned)"><figcaption>Epoch 10</figcaption></figure>
+      </div>
+
+      <div class="note small" style="margin-top: 12px;">
+        If you saved an “all‑epochs comparison” composite, you can keep <code>23output.png</code> below; otherwise remove it.
+      </div>
+      <div class="grid">
+        <figure>
+          <img class="thumb" src="images/partb/23output.png" alt="Composite sampling visualization (time-conditioned)">
+          <figcaption>Composite sampling visualization (optional)</figcaption>
+        </figure>
+      </div>
+
+      <h3>2.5 Training a Class‑Conditioned UNet</h3>
+      <p>
+        I added class conditioning using a one‑hot digit vector \(c\) with dropout (classifier‑free guidance style), then trained the model similarly.
+      </p>
+      <div class="grid">
+        <figure>
+          <img class="thumb" src="images/partb/25output.png" alt="Training loss curve for class-conditioned UNet">
+          <figcaption>Training loss curve (class‑conditioned UNet)</figcaption>
+        </figure>
+      </div>
+
+      <h3>2.6 Sampling from the Class‑Conditioned UNet (with CFG)</h3>
+      <p>
+        Finally, I sampled from the class‑conditioned model using classifier‑free guidance (\(\gamma=5.0\)).
+        Below are results after 1, 5, and 10 epochs.
+      </p>
+
+      <div class="grid grid-3">
+        <figure><img class="thumb" src="images/partb/26output-epoch1.png" alt="Sampling results after 1 epoch (class-conditioned)"><figcaption>Epoch 1</figcaption></figure>
+        <figure><img class="thumb" src="images/partb/26output-epoch5.png" alt="Sampling results after 5 epochs (class-conditioned)"><figcaption>Epoch 5</figcaption></figure>
+        <figure><img class="thumb" src="images/partb/26output-epoch10.png" alt="Sampling results after 10 epochs (class-conditioned)"><figcaption>Epoch 10</figcaption></figure>
+      </div>
+
+      <h4>Removing the Learning Rate Scheduler</h4>
+      <p>
+        The spec asks to remove the exponential LR scheduler while maintaining similar performance. If you ran this experiment, add your
+        “no‑scheduler” visualization and a short description of what you changed (e.g., learning rate, epochs, optimizer settings).
+      </p>
+
+      <div class="grid">
+        <figure>
+          <img class="thumb" src="images/partb/26output.png" alt="No-scheduler experiment visualization (or composite)">
+          <figcaption>No‑scheduler experiment (or composite visualization)</figcaption>
+        </figure>
+      </div>
+
+</main>
+</body>
+</html>

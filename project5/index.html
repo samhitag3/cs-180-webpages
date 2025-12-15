@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CS180 Project 4</title>
+  <title>CS180 Project 5</title>
   <!-- MathJax for formulas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML"></script>
   <style>
@@ -21,32 +21,552 @@
     .small { max-width: 680px; margin: 0 auto; }
     .note { background: #fffbe6; border: 1px solid #ffe58f; padding: 10px 12px; border-radius: 6px; }
     .muted { opacity: 0.8; }
-    .equ { background: #fbfbff; border: 1px dashed #dfe3ff; padding: 8px 10px; border-radius: 6px; }
-    video { max-width: 100%; height: auto; border-radius: 8px; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Project 5: Flow Matching from Scratch!</h1>
+  <h1>Project 5: Diffusion Models</h1>
   <p class="muted">Course: CS180 • <em>Samhita Ghosh</em> • Fall 2025</p>
 </header>
 
 <main>
-  <h2>Overview</h2>
-  <p>
-  </p>
+  <section id="overview">
+    <h2>Overview</h2>
+    <p>
+      In Part A, I worked with a pre-trained diffusion model (DeepFloyd IF) and implemented sampling loops
+      plus a few classic diffusion “applications” like inpainting and optical illusions. In Part B, I trained a UNet-based model on MNIST
+      from scratch and used flow matching to iteratively generate digits.
+    </p>
+  </section>
 
-  <h2>Part A: The Power of Diffusion Models!</h2>
+  <section id="part-a">
+    <h2>Part A: The Power of Diffusion Models</h2>
 
-  <h3>Part 0: Setup</h3>
-  <h3>Part 1: Sampling Loops</h3>
+    <section id="a-setup">
+      <h3>Part 0: Setup + Text Prompts</h3>
+      <p>
+        DeepFloyd IF uses prompt embeddings (rather than raw text) as conditioning. I generated a prompt embedding dictionary and
+        used a fixed random seed for reproducibility.
+      </p>
+      <ul>
+        <li>Random seed used for all Part A results: <code>100</code></li>
+        <li>Prompt embeddings file: <code>prompt_embeds_dict.pth</code></li>
+      </ul>
 
-  <h2>Part B: Flow Matching from Scratch!</h2>
-  <h3>Part 1: Training a Single-Step Denoising UNet</h3>
-  <h3>Part 2: Training a Flow Matching Model</h3>
+      <div class="grid">
+        <figure>
+          <img src="images/new_images/dog20.png" class="thumb" alt="a photo of a dog, num_inference_steps = 20">
+          <figcaption>a photo of a dog, num_inference_steps = 20</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/dog100.png" class="thumb" alt="a photo of a dog, num_inference_steps = 100">
+          <figcaption>a photo of a dog, num_inference_steps = 100</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/skull20.png" class="thumb" alt="a lithograph of a skull, num_inference_steps = 20">
+          <figcaption>a lithograph of a skull, num_inference_steps = 20</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/skull100.png" class="thumb" alt="a lithograph of a skull, num_inference_steps = 100">
+          <figcaption>a lithograph of a skull, num_inference_steps = 100</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/rocket20.png" class="thumb" alt="a rocket ship, num_inference_steps = 20">
+          <figcaption>a rocket ship, num_inference_steps = 20</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/rocket100.png" class="thumb" alt="a rocket ship, num_inference_steps = 100">
+          <figcaption>a rocket ship, num_inference_steps = 100</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="a-forward">
+      <h3>1.1 Implementing the Forward Process</h3>
+      <p>
+        The forward process adds noise to a clean image \(x_0\) to produce a noisy image \(x_t\):
+        \[
+          x_t = \sqrt{\bar\alpha_t}x_0 + \sqrt{1-\bar\alpha_t}\,\epsilon,\quad \epsilon\sim\mathcal N(0,I).
+        \]
+        Below are examples of the Campanile after adding noise at different timesteps.
+      </p>
+      <div class="grid">
+        <figure>
+          <img src="images/parta/forward_noisy_t=250.JPG" class="thumb" alt="Forward process noisy image at t=250">
+          <figcaption>Forward process: \(t=250\)</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/forward_noisy_t=500.JPG" class="thumb" alt="Forward process noisy image at t=500">
+          <figcaption>Forward process: \(t=500\)</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/forward_noisy_t=750.JPG" class="thumb" alt="Forward process noisy image at t=750">
+          <figcaption>Forward process: \(t=750\)</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="a-classical">
+      <h3>1.2 Classical Denoising</h3>
+      <p>
+        As a baseline, I applied a simple classical denoising method to the noisy images. This is not diffusion-based, but it gives a
+        quick point of comparison for what “generic” denoising does at different noise levels.
+      </p>
+
+      <div class="grid">
+        <figure>
+          <img src="images/parta/classical_noisy_t=250.JPG" class="thumb" alt="Classical denoising input noisy image at t=250">
+          <figcaption>Noisy input: \(t=250\)</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classical_denoised_t=250.JPG" class="thumb" alt="Classical denoised result at t=250">
+          <figcaption>Classical denoised: \(t=250\)</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classical_noisy_t=500.JPG" class="thumb" alt="Classical denoising input noisy image at t=500">
+          <figcaption>Noisy input: \(t=500\)</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classical_denoised_t=500.JPG" class="thumb" alt="Classical denoised result at t=500">
+          <figcaption>Classical denoised: \(t=500\)</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classical_noisy_t=750.JPG" class="thumb" alt="Classical denoising input noisy image at t=750">
+          <figcaption>Noisy input: \(t=750\)</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classical_denoised_t=750.JPG" class="thumb" alt="Classical denoised result at t=750">
+          <figcaption>Classical denoised: \(t=750\)</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="a-one-step">
+      <h3>1.3 One-step Denoising</h3>
+      <p>
+        One-step denoising predicts a single-step estimate of the clean image from a noisy input. Below are the original,
+        noisy, and one-step denoised results at a few timesteps.
+      </p>
+
+      <div class="grid">
+        <figure>
+          <img src="images/parta/one_step_original_t=250.JPG" class="thumb" alt="Original image (t=250 comparison)">
+          <figcaption>Original</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/one_step_noisy_t=250.JPG" class="thumb" alt="One-step noisy input at t=250">
+          <figcaption>Noisy (\(t=250\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/one_step_denoised_t=250.JPG" class="thumb" alt="One-step denoised output at t=250">
+          <figcaption>One-step denoised (\(t=250\))</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid">
+        <figure>
+          <img src="images/parta/one_step_original_t=500.JPG" class="thumb" alt="Original image (t=500 comparison)">
+          <figcaption>Original</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/one_step_noisy_t=500.JPG" class="thumb" alt="One-step noisy input at t=500">
+          <figcaption>Noisy (\(t=500\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/one_step_denoised_t=500.JPG" class="thumb" alt="One-step denoised output at t=500">
+          <figcaption>One-step denoised (\(t=500\))</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid">
+        <figure>
+          <img src="images/parta/one_step_original_t=750.JPG" class="thumb" alt="Original image (t=750 comparison)">
+          <figcaption>Original</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/one_step_noisy_t=750.JPG" class="thumb" alt="One-step noisy input at t=750">
+          <figcaption>Noisy (\(t=750\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/one_step_denoised_t=750.JPG" class="thumb" alt="One-step denoised output at t=750">
+          <figcaption>One-step denoised (\(t=750\))</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="a-iterative">
+      <h3>1.4 Iterative Denoising Loop</h3>
+      <p>
+        Iterative denoising repeatedly predicts and removes noise across a schedule of timesteps to transform pure noise into a clean image.
+      </p>
+      <div class="grid">
+        <figure>
+          <img src="images/14iterative/14denoisedstep0_t690.JPG" class="thumb" alt="denoised image at step 0, t=690">
+          <figcaption>denoised image at step 0, t=690</figcaption>
+        </figure>
+        <figure>
+          <img src="images/14iterative/14denoisedstep5_t540.JPG" class="thumb" alt="denoised image at step 5, t=540">
+          <figcaption>denoised image at step 5, t=540</figcaption>
+        </figure>
+        <figure>
+          <img src="images/14iterative/14denoisedstep10_t390.JPG" class="thumb" alt="denoised image at step 10, t=390">
+          <figcaption>denoised image at step 10, t=390</figcaption>
+        </figure>
+        <figure>
+          <img src="images/14iterative/14denoisedstep15_t240.JPG" class="thumb" alt="denoised image at step 15, t=240">
+          <figcaption>denoised image at step 15, t=240</figcaption>
+        </figure>
+        <figure>
+          <img src="images/14iterative/14denoisedstep20_t90.JPG" class="thumb" alt="denoised image at step 20, t=90">
+          <figcaption>denoised image at step 20, t=90</figcaption>
+        </figure>
+        <figure>
+          <img src="images/14iterative/14denoisedstep22_t30.JPG" class="thumb" alt="denoised image at step 22, t=30">
+          <figcaption>denoised image at step 22, t=30</figcaption>
+        </figure>
+      </div>
+    </section>
+    </section>
+
+    <section id="a-sampling">
+      <h3>1.5 Diffusion Model Sampling</h3>
+      <p>
+        Starting from random Gaussian noise, I ran the iterative denoising procedure to sample images using the prompt
+        <code>"a high quality photo"</code>.
+      </p>
+      <div class="grid">
+        <figure>
+          <img src="images/parta/random_denoise_1.JPG" class="thumb" alt="Random sample 1">
+          <figcaption>Sample 1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/random_denoise_2.JPG" class="thumb" alt="Random sample 2">
+          <figcaption>Sample 2</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/random_denoise_3.JPG" class="thumb" alt="Random sample 3">
+          <figcaption>Sample 3</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/random_denoise_4.JPG" class="thumb" alt="Random sample 4">
+          <figcaption>Sample 4</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/random_denoise_5.JPG" class="thumb" alt="Random sample 5">
+          <figcaption>Sample 5</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="a-cfg">
+      <h3>1.6 Classifier-Free Guidance (CFG)</h3>
+      <p>
+        Classifier-free guidance combines a conditional and unconditional noise estimate to strengthen adherence to a prompt:
+        \[
+          \epsilon = \epsilon_u + s(\epsilon_c - \epsilon_u).
+        \]
+        Below are five samples generated with CFG (scale \(s=7\)).
+      </p>
+      <div class="grid">
+        <figure>
+          <img src="images/parta/classifier_free_denoise_1.JPG" class="thumb" alt="CFG sample 1">
+          <figcaption>CFG sample 1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classifier_free_denoise_2.JPG" class="thumb" alt="CFG sample 2">
+          <figcaption>CFG sample 2</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classifier_free_denoise_3.JPG" class="thumb" alt="CFG sample 3">
+          <figcaption>CFG sample 3</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classifier_free_denoise_4.JPG" class="thumb" alt="CFG sample 4">
+          <figcaption>CFG sample 4</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/classifier_free_denoise_5.JPG" class="thumb" alt="CFG sample 5">
+          <figcaption>CFG sample 5</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="a-i2i">
+      <h3>1.7 Image-to-Image Translation and Editing</h3>
+
+      <h4>1.7.1 Editing Hand-Drawn and Web Images</h4>
+      <div class="grid">
+        <figure>
+          <img src="images/171/tre1.jpg" class="thumb" alt="tree at i_start=1">
+          <figcaption>tree at i_start=1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/tre3.jpg" class="thumb" alt="tree at i_start=3">
+          <figcaption>tree at i_start=3</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/tre5.jpg" class="thumb" alt="tree at i_start=5">
+          <figcaption>tree at i_start=5</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/tre7.jpg" class="thumb" alt="tree at i_start=7">
+          <figcaption>tree at i_start=7</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/tre10.jpg" class="thumb" alt="tree at i_start=10">
+          <figcaption>tree at i_start=10</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/tre20.jpg" class="thumb" alt="tree at i_start=20">
+          <figcaption>tree at i_start=20</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid">
+        <figure>
+          <img src="images/171/bunny1.jpg" class="thumb" alt="bunny at i_start=1">
+          <figcaption>bunny at i_start=1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/bunny3.jpg" class="thumb" alt="bunny at i_start=3">
+          <figcaption>bunny at i_start=3</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/bunny5.jpg" class="thumb" alt="bunny at i_start=5">
+          <figcaption>bunny at i_start=5</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/bunny7.jpg" class="thumb" alt="bunny at i_start=7">
+          <figcaption>bunny at i_start=7</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/bunny10.jpg" class="thumb" alt="bunny at i_start=10">
+          <figcaption>bunny at i_start=10</figcaption>
+        </figure>
+        <figure>
+          <img src="images/171/bunny20.jpg" class="thumb" alt="bunny at i_start=20">
+          <figcaption>bunny at i_start=20</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid">
+        <figure>
+          <img src="images/new_images/nailong1.png" class="thumb" alt="nailong at i_start=1">
+          <figcaption>nailong at i_start=1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/nailong3.png" class="thumb" alt="nailong at i_start=3">
+          <figcaption>nailong at i_start=3</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/nailong5.png" class="thumb" alt="nailong at i_start=5">
+          <figcaption>nailong at i_start=5</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/nailong7.png" class="thumb" alt="nailong at i_start=7">
+          <figcaption>nailong at i_start=7</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/nailong10.png" class="thumb" alt="nailong at i_start=10">
+          <figcaption>nailong at i_start=10</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/nailong20.png" class="thumb" alt="nailong at i_start=20">
+          <figcaption>nailong at i_start=20</figcaption>
+        </figure>
+      </div>
+
+      <h4>1.7.2 Inpainting</h4>
+      <p>
+        Inpainting uses a binary mask \(m\) to constrain denoising so that only masked regions change:
+        \[
+          x_t \leftarrow m\odot x_t + (1-m)\odot \text{forward}(x_{orig}, t).
+        \]
+      </p>
+      <div class="grid">
+        <figure>
+          <img src="images/parta/inpainted_campinile.JPG" class="thumb" alt="Inpainting result on the Campanile">
+          <figcaption>Inpainting result (Campanile)</figcaption>
+        </figure>
+      </div>
+      <!-- inpainting -->
+
+      <h4>1.7.3 Text-Conditional Image-to-Image Translation</h4>
+      <p>
+        I applied text-conditioned image-to-image translation by starting from a noisy version of an input image (controlled by <code>i_start</code>)
+        and denoising with a chosen prompt. Below are edits of the Campanile using different noise levels
+        \(i_{start} \in \{1,3,5,7,10,20\}\).
+      </p>
+      <div class="grid">
+        <figure>
+          <img src="images/parta/173image_1.JPG" class="thumb" alt="Campanile edit with i_start=1">
+          <figcaption>Campanile edit (\(i_{start}=1\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/173image_3.JPG" class="thumb" alt="Campanile edit with i_start=3">
+          <figcaption>Campanile edit (\(i_{start}=3\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/173image_5.JPG" class="thumb" alt="Campanile edit with i_start=5">
+          <figcaption>Campanile edit (\(i_{start}=5\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/173image_7.JPG" class="thumb" alt="Campanile edit with i_start=7">
+          <figcaption>Campanile edit (\(i_{start}=7\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/173image_10.JPG" class="thumb" alt="Campanile edit with i_start=10">
+          <figcaption>Campanile edit (\(i_{start}=10\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/173image_20.JPG" class="thumb" alt="Campanile edit with i_start=20">
+          <figcaption>Campanile edit (\(i_{start}=20\))</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid">
+        <figure>
+          <img src="images/parta/image_to_image_5.JPG" class="thumb" alt="Text-conditioned image-to-image translation on my own image">
+          <figcaption>Text-conditioned edit on my own test image</figcaption>
+        </figure>
+      </div>
+      <!-- 173 -->
+    </section>
+
+    <section id="a-anagrams">
+      <h3>1.8 Visual Anagrams</h3>
+      <!-- visual anagrams -->
+    </section>
+
+    <section id="a-hybrids">
+      <h3>1.9 Hybrid Images</h3>
+      <!-- hybrids -->
+    </section>
+
+  </section>
+
+  <section id="part-b">
+    <h2>Part B: Flow Matching from Scratch</h2>
+    <p>
+      In Part B, I trained UNet-based models on MNIST. I started with a single-step denoiser trained with an MSE objective,
+      then moved to flow matching (time conditioning), and finally added class conditioning with classifier-free guidance.
+    </p>
+
+    <section id="b-1">
+      <h3>Part 1: Training a Single-Step Denoising UNet</h3>
+
+      <h4>1.2 Using the UNet to Train a Denoiser</h4>
+      <p>
+        Training pairs are generated by sampling noise and forming \(z = x + \sigma\epsilon\) for MNIST images \(x\).
+      </p>
+
+      <div class="grid">
+        <figure>
+          <img src="images/partb/12output.png" class="thumb" alt="Visualization of the noising process for different sigma values">
+          <figcaption>Visualization of the noising process for \(\sigma=[0.0,0.2,0.4,0.5,0.6,0.8,1.0]\)</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid">
+        <figure>
+          <img src="images/partb/123output.png" class="thumb" alt="Training loss curve for the single-step denoiser">
+          <figcaption>Training loss curve (single-step denoiser, trained at \(\sigma=0.5\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/partb/121output.png" class="thumb" alt="Single-step denoising results after epoch 1">
+          <figcaption>Single-step denoising: results after epoch 1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/partb/122output.png" class="thumb" alt="Single-step denoising results after epoch 5">
+          <figcaption>Single-step denoising: results after epoch 5</figcaption>
+        </figure>
+      </div>
+
+      <h4>1.2.2 Out-of-Distribution Testing</h4>
+      <p>
+        After training at \(\sigma=0.5\), I evaluated the denoiser on different noise levels to see how well it generalizes.
+      </p>
+      <div class="grid">
+        <figure>
+          <img src="images/partb/22output.png" class="thumb" alt="Out-of-distribution denoising results across different sigma values">
+          <figcaption>Out-of-distribution denoising results across different \(\sigma\) values</figcaption>
+        </figure>
+      </div>
+      <!-- double check img -->
+
+      <h4>1.2.3 Denoising Pure Noise</h4>
+      <p>
+        I also trained a model where the input is pure noise (instead of a noised MNIST digit). With an MSE objective, the model tends to
+        predict something like an “average” over the training distribution, which can lead to blurry, superimposed digit-like patterns.
+      </p>
+      <!-- training loss curve for pure-noise denoising + sample results after epochs 1 and 5 -->
+    </section>
+
+    <section id="b-2">
+      <h3>Part 2: Training a Flow Matching Model</h3>
+
+      <h4>2.2 Training the Time-Conditioned UNet</h4>
+      <p>
+        Flow matching results in a vector field \(u(x_t,t)=x_1-x_0\) where \(x_t=(1-t)x_0+tx_1\), with \(x_0\sim\mathcal N(0,I)\) and \(x_1\) from MNIST.
+      </p>
+
+      <div class="grid">
+        <figure>
+          <img src="images/partb/23output.png" class="thumb" alt="Training loss curve for the time-conditioned UNet">
+          <figcaption>Training loss curve (time-conditioned UNet)</figcaption>
+        </figure>
+      </div>
+
+      <h4>2.3 Sampling from the Time-Conditioned UNet</h4>
+      <div class="grid">
+        <figure>
+          <img src="images/partb/23output-epoch1.png" class="thumb" alt="Sampling results from time-conditioned UNet after epoch 1">
+          <figcaption>Sampling after epoch 1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/partb/23output-epoch5.png" class="thumb" alt="Sampling results from time-conditioned UNet after epoch 5">
+          <figcaption>Sampling after epoch 5</figcaption>
+        </figure>
+        <figure>
+          <img src="images/partb/23output-epoch10.png" class="thumb" alt="Sampling results from time-conditioned UNet after epoch 10">
+          <figcaption>Sampling after epoch 10</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="b-3">
+      <h3>Class-Conditioning + Classifier-Free Guidance</h3>
+
+      <h4>2.5 Training the Class-Conditioned UNet</h4>
+      <div class="grid">
+        <figure>
+          <img src="images/partb/26output.png" class="thumb" alt="Training loss curve for the class-conditioned UNet">
+          <figcaption>Training loss curve (class-conditioned UNet)</figcaption>
+        </figure>
+      </div>
+
+      <h4>2.6 Sampling from the Class-Conditioned UNet</h4>
+      <div class="grid">
+        <figure>
+          <img src="images/partb/26output-epoch1.png" class="thumb" alt="Class-conditioned sampling results after epoch 1">
+          <figcaption>Class-conditioned sampling after epoch 1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/partb/26output-epoch5.png" class="thumb" alt="Class-conditioned sampling results after epoch 5">
+          <figcaption>Class-conditioned sampling after epoch 5</figcaption>
+        </figure>
+        <figure>
+          <img src="images/partb/26output-epoch10.png" class="thumb" alt="Class-conditioned sampling results after epoch 10">
+          <figcaption>Class-conditioned sampling after epoch 10</figcaption>
+        </figure>
+      </div>
+
+      <!-- generate 4 instances of each digit (0–9), remove the scheduler and show comparable results-->
+    </section>
+
+  </section>
 
 </main>
-
 </body>
 </html>
