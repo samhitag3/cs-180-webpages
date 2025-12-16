@@ -26,248 +26,287 @@
 <body>
 
 <header>
-  <h1>Project 5: Diffusion Models</h1>
+  <h1>Project 5: Fun With Diffusion Models!</h1>
   <p class="muted">Course: CS180 • <em>Samhita Ghosh</em> • Fall 2025</p>
 </header>
 
 <main>
-  <section id="overview">
-    <h2>Overview</h2>
-    <p>
-      In Part A, I worked with a pre-trained diffusion model (DeepFloyd IF) and implemented sampling loops
-      plus a few classic diffusion “applications” like inpainting and optical illusions. In Part B, I trained a UNet-based model on MNIST
-      from scratch and used flow matching to iteratively generate digits.
-    </p>
-  </section>
-
-  <section id="part-a">
-    <h2>Part A: The Power of Diffusion Models</h2>
-
-    <section id="a-setup">
-      <h3>Part 0: Setup + Text Prompts</h3>
-      <p>
-        DeepFloyd IF uses prompt embeddings (rather than raw text) as conditioning. I generated a prompt embedding dictionary and
-        used a fixed random seed for reproducibility.
-      </p>
-      <ul>
-        <li>Random seed used for all Part A results: <code>100</code></li>
-        <li>Prompt embeddings file: <code>prompt_embeds_dict.pth</code></li>
-      </ul>
-
-      <div class="grid">
-        <figure>
-          <img src="images/new_images/dog20.png" class="thumb" alt="a photo of a dog, num_inference_steps = 20">
-          <figcaption>a photo of a dog, num_inference_steps = 20</figcaption>
-        </figure>
-        <figure>
-          <img src="images/new_images/dog100.png" class="thumb" alt="a photo of a dog, num_inference_steps = 100">
-          <figcaption>a photo of a dog, num_inference_steps = 100</figcaption>
-        </figure>
-        <figure>
-          <img src="images/new_images/skull20.png" class="thumb" alt="a lithograph of a skull, num_inference_steps = 20">
+  <h2>Overview</h2>
+  <p>
+    In Part A, I worked with a pre-trained diffusion model (DeepFloyd IF) and
+    implemented sampling loops plus a few classic diffusion "applications" like
+    inpainting and optical illusions. In Part B, I trained a UNet-based model on
+    MNIST from scratch and used flow matching to iteratively generate digits.
+  </p>
+  
+  <h2>Part A: The Power of Diffusion Models!</h2>
+  <h3>Part 0: Setup</h3>
+  <p>
+    DeepFloyd IF uses prompt embeddings (rather than raw text) as conditioning.
+    I generated a prompt embedding dictionary and used a fixed random seed of 100
+    for reproducibility. I tried num_inference_steps values of 20 and 60, and
+    noticed that the the ones with 20 were generated faster, but the ones with
+    60 were more "accurate" to the prompt and better quality in that sense.
+  </p>
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/new_images/skull20.png" alt="a lithograph of a skull, num_inference_steps = 20" width="400px">
           <figcaption>a lithograph of a skull, num_inference_steps = 20</figcaption>
-        </figure>
-        <figure>
-          <img src="images/new_images/skull100.png" class="thumb" alt="a lithograph of a skull, num_inference_steps = 100">
-          <figcaption>a lithograph of a skull, num_inference_steps = 100</figcaption>
-        </figure>
-        <figure>
-          <img src="images/new_images/rocket20.png" class="thumb" alt="a rocket ship, num_inference_steps = 20">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/new_images/rocket20.png" alt="a rocket ship, num_inference_steps = 20" width="400px">
           <figcaption>a rocket ship, num_inference_steps = 20</figcaption>
-        </figure>
-        <figure>
-          <img src="images/new_images/rocket100.png" class="thumb" alt="a rocket ship, num_inference_steps = 100">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/new_images/dog20.png" alt="a photo of a dog, num_inference_steps = 20" width="400px">
+          <figcaption>a photo of a dog, num_inference_steps = 20</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/new_images/skull100.png" alt="a lithograph of a skull, num_inference_steps = 100" width="400px">
+          <figcaption>a lithograph of a skull, num_inference_steps = 100</figcaption>
+        </td>
+        <td style="text-align: center;">
+          <img src="images/new_images/rocket100.png" alt="a rocket ship, num_inference_steps = 100" width="400px">
           <figcaption>a rocket ship, num_inference_steps = 100</figcaption>
-        </figure>
-      </div>
-    </section>
+        </td>
+        <td style="text-align: center;">
+          <img src="images/new_images/dog100.png" alt="a photo of a dog, num_inference_steps = 100" width="400px">
+          <figcaption>a photo of a dog, num_inference_steps = 100</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
 
-    <section id="a-forward">
-      <h3>1.1 Implementing the Forward Process</h3>
-      <p>
-        The forward process adds noise to a clean image \(x_0\) to produce a noisy image \(x_t\):
-        \[
-          x_t = \sqrt{\bar\alpha_t}x_0 + \sqrt{1-\bar\alpha_t}\,\epsilon,\quad \epsilon\sim\mathcal N(0,I).
-        \]
-        Below are examples of the Campanile after adding noise at different timesteps.
-      </p>
-      <div class="grid">
-        <figure>
-          <img src="images/parta/forward_noisy_t=250.JPG" class="thumb" alt="Forward process noisy image at t=250">
+  <h3>Part 1: Sampling Loops</h3>
+  <h4>1.1 Implementing the Forward Process</h4>
+  <p>
+    The forward process adds noise to a clean image \(x_0\) to produce a noisy image \(x_t\):
+    \[
+    x_t = \sqrt{\bar\alpha_t}x_0 + \sqrt{1-\bar\alpha_t}\,\epsilon,\quad
+    \epsilon\sim\mathcal N(0,I).
+    \]
+    Below are examples of the Campanile after adding noise at different timesteps.
+  </p>
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/parta/forward_noisy_t=250.JPG" alt="Forward process noisy image at t=250" width="400px">
           <figcaption>Forward process: \(t=250\)</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/forward_noisy_t=500.JPG" class="thumb" alt="Forward process noisy image at t=500">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/forward_noisy_t=500.JPG" alt="Forward process noisy image at t=500" width="400px">
           <figcaption>Forward process: \(t=500\)</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/forward_noisy_t=750.JPG" class="thumb" alt="Forward process noisy image at t=750">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/forward_noisy_t=750.JPG" alt="Forward process noisy image at t=750" width="400px">
           <figcaption>Forward process: \(t=750\)</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <section id="a-classical">
-      <h3>1.2 Classical Denoising</h3>
-      <p>
-        As a baseline, I applied a simple classical denoising method to the noisy images. This is not diffusion-based, but it gives a
-        quick point of comparison for what “generic” denoising does at different noise levels.
-      </p>
-
-      <div class="grid">
-        <figure>
-          <img src="images/parta/classical_noisy_t=250.JPG" class="thumb" alt="Classical denoising input noisy image at t=250">
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <h5>1.2 Classical Denoising</h5>
+  <p>
+    As a baseline, I applied a simple classical denoising method (using Gaussian blur filtering) to the noisy
+    images. This is not diffusion-based, but it gives a quick point of comparison
+    for what "generic" denoising does at different noise levels.
+  </p>
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/parta/classical_noisy_t=250.JPG" alt="Classical denoising input noisy image at t=250" width="400px">
           <figcaption>Noisy input: \(t=250\)</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/classical_denoised_t=250.JPG" class="thumb" alt="Classical denoised result at t=250">
-          <figcaption>Classical denoised: \(t=250\)</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/classical_noisy_t=500.JPG" class="thumb" alt="Classical denoising input noisy image at t=500">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/classical_noisy_t=500.JPG" alt="Classical denoising input noisy image at t=500" width="400px">
           <figcaption>Noisy input: \(t=500\)</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/classical_denoised_t=500.JPG" class="thumb" alt="Classical denoised result at t=500">
-          <figcaption>Classical denoised: \(t=500\)</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/classical_noisy_t=750.JPG" class="thumb" alt="Classical denoising input noisy image at t=750">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/classical_noisy_t=750.JPG" alt="Classical denoising input noisy image at t=750" width="400px">
           <figcaption>Noisy input: \(t=750\)</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/classical_denoised_t=750.JPG" class="thumb" alt="Classical denoised result at t=750">
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/parta/classical_denoised_t=250.JPG" alt="Classical denoised result at t=250" width="400px">
+          <figcaption>Classical denoised: \(t=250\)</figcaption>
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/classical_denoised_t=500.JPG" alt="Classical denoised result at t=500" width="400px">
+          <figcaption>Classical denoised: \(t=500\)</figcaption>
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/classical_denoised_t=750.JPG" alt="Classical denoised result at t=750" width="400px">
           <figcaption>Classical denoised: \(t=750\)</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <section id="a-one-step">
-      <h3>1.3 One-step Denoising</h3>
-      <p>
-        One-step denoising predicts a single-step estimate of the clean image from a noisy input. Below are the original,
-        noisy, and one-step denoised results at a few timesteps.
-      </p>
-
-      <div class="grid">
-        <figure>
-          <img src="images/parta/one_step_original_t=250.JPG" class="thumb" alt="Original image (t=250 comparison)">
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <h4>1.3 One-step Denoising</h4>
+  <p>
+    One-step denoising predicts a single-step estimate of the clean image from a
+    noisy input. Below are the original, noisy, and one-step denoised results at
+    a few timesteps.
+  </p>
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_original_t=250.JPG" alt="Original image (t=250 comparison)" width="400px">
           <figcaption>Original</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/one_step_noisy_t=250.JPG" class="thumb" alt="One-step noisy input at t=250">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_noisy_t=250.JPG" alt="One-step noisy input at t=250" width="400px">
           <figcaption>Noisy (\(t=250\))</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/one_step_denoised_t=250.JPG" class="thumb" alt="One-step denoised output at t=250">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_denoised_t=250.JPG" alt="One-step denoised output at t=250" width="400px">
           <figcaption>One-step denoised (\(t=250\))</figcaption>
-        </figure>
-      </div>
-
-      <div class="grid">
-        <figure>
-          <img src="images/parta/one_step_original_t=500.JPG" class="thumb" alt="Original image (t=500 comparison)">
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_original_t=500.JPG" alt="Original image (t=500 comparison)" width="400px">
           <figcaption>Original</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/one_step_noisy_t=500.JPG" class="thumb" alt="One-step noisy input at t=500">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_noisy_t=500.JPG" alt="One-step noisy input at t=500" width="400px">
           <figcaption>Noisy (\(t=500\))</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/one_step_denoised_t=500.JPG" class="thumb" alt="One-step denoised output at t=500">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_denoised_t=500.JPG" alt="One-step denoised output at t=500" width="400px">
           <figcaption>One-step denoised (\(t=500\))</figcaption>
-        </figure>
-      </div>
-
-      <div class="grid">
-        <figure>
-          <img src="images/parta/one_step_original_t=750.JPG" class="thumb" alt="Original image (t=750 comparison)">
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_original_t=750.JPG" alt="Original image (t=750 comparison)" width="400px">
           <figcaption>Original</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/one_step_noisy_t=750.JPG" class="thumb" alt="One-step noisy input at t=750">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_noisy_t=750.JPG" alt="One-step noisy input at t=750" width="400px">
           <figcaption>Noisy (\(t=750\))</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/one_step_denoised_t=750.JPG" class="thumb" alt="One-step denoised output at t=750">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/one_step_denoised_t=750.JPG" alt="One-step denoised output at t=750" width="400px">
           <figcaption>One-step denoised (\(t=750\))</figcaption>
-        </figure>
-      </div>
-    </section>
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <h4>1.4 Iterative Denoising Loop</h4>
+  <p>
+    Iterative denoising repeatedly predicts and removes noise across a schedule
+    of timesteps to transform pure noise into a clean image.
+  </p>
 
-    <section id="a-iterative">
-      <h3>1.4 Iterative Denoising Loop</h3>
-      <p>
-        Iterative denoising repeatedly predicts and removes noise across a schedule of timesteps to transform pure noise into a clean image.
-      </p>
-      <div class="grid">
-        <figure>
-          <img src="images/14iterative/14denoisedstep0_t690.JPG" class="thumb" alt="denoised image at step 0, t=690">
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/14iterative/14denoisedstep0_t690.JPG" alt="denoised image at step 0, t=690" width="400px">
           <figcaption>denoised image at step 0, t=690</figcaption>
-        </figure>
-        <figure>
-          <img src="images/14iterative/14denoisedstep5_t540.JPG" class="thumb" alt="denoised image at step 5, t=540">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/14iterative/14denoisedstep5_t540.JPG" alt="denoised image at step 5, t=540" width="400px">
           <figcaption>denoised image at step 5, t=540</figcaption>
-        </figure>
-        <figure>
-          <img src="images/14iterative/14denoisedstep10_t390.JPG" class="thumb" alt="denoised image at step 10, t=390">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/14iterative/14denoisedstep10_t390.JPG" alt="denoised image at step 10, t=390" width="400px">
           <figcaption>denoised image at step 10, t=390</figcaption>
-        </figure>
-        <figure>
-          <img src="images/14iterative/14denoisedstep15_t240.JPG" class="thumb" alt="denoised image at step 15, t=240">
-          <figcaption>denoised image at step 15, t=240</figcaption>
-        </figure>
-        <figure>
-          <img src="images/14iterative/14denoisedstep20_t90.JPG" class="thumb" alt="denoised image at step 20, t=90">
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/14iterative/14denoisedstep15_t240.JPG" alt="denoised image at step 15, t=240" width="400px">
+          <figcaption>denoised image at step 0, t=690</figcaption>
+        </td>
+        <td style="text-align: center;">
+          <img src="images/14iterative/14denoisedstep20_t90.JPG" alt="denoised image at step 20, t=90" width="400px">
           <figcaption>denoised image at step 20, t=90</figcaption>
-        </figure>
-        <figure>
-          <img src="images/14iterative/14denoisedstep22_t30.JPG" class="thumb" alt="denoised image at step 22, t=30">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/14iterative/14denoisedstep22_t30.JPG" alt="denoised image at step 22, t=30" width="400px">
           <figcaption>denoised image at step 22, t=30</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  
+  <div class="grid">
+        <figure>
+          <img src="images/lastruna/14noisy.JPG" class="thumb" alt="noisy">
+          <figcaption>noisy</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/14iterative.JPG" class="thumb" alt="iterative">
+          <figcaption>iterative denoising</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/14onestep.JPG" class="thumb" alt="onestep">
+          <figcaption>one-step denoising</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/14gaussian.JPG" class="thumb" alt="gaussian">
+          <figcaption>gaussian blur</figcaption>
         </figure>
       </div>
-    </section>
-    </section>
 
-    <section id="a-sampling">
-      <h3>1.5 Diffusion Model Sampling</h3>
-      <p>
-        Starting from random Gaussian noise, I ran the iterative denoising procedure to sample images using the prompt
-        <code>"a high quality photo"</code>.
-      </p>
-      <div class="grid">
-        <figure>
-          <img src="images/parta/random_denoise_1.JPG" class="thumb" alt="Random sample 1">
+  
+  
+  <h4>1.5 Diffusion Model Sampling</h4>
+  <p>
+    Starting from random Gaussian noise, I ran the iterative denoising procedure
+    to sample images using the prompt "a high quality photo".
+  </p>
+
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/parta/random_denoise_1.JPG" alt="Random sample 1" width="400px">
           <figcaption>Sample 1</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/random_denoise_2.JPG" class="thumb" alt="Random sample 2">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/random_denoise_2.JPG" alt="Random sample 2" width="400px">
           <figcaption>Sample 2</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/random_denoise_3.JPG" class="thumb" alt="Random sample 3">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/random_denoise_3.JPG" alt="Random sample 3" width="400px">
           <figcaption>Sample 3</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/random_denoise_4.JPG" class="thumb" alt="Random sample 4">
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">
+          <img src="images/parta/random_denoise_4.JPG" alt="Random sample 4" width="400px">
           <figcaption>Sample 4</figcaption>
-        </figure>
-        <figure>
-          <img src="images/parta/random_denoise_5.JPG" class="thumb" alt="Random sample 5">
+        </td>
+        <td style="text-align: center;">
+          <img src="images/parta/random_denoise_5.JPG" alt="Random sample 5" width="400px">
           <figcaption>Sample 5</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <section id="a-cfg">
-      <h3>1.6 Classifier-Free Guidance (CFG)</h3>
-      <p>
-        Classifier-free guidance combines a conditional and unconditional noise estimate to strengthen adherence to a prompt:
-        \[
-          \epsilon = \epsilon_u + s(\epsilon_c - \epsilon_u).
-        \]
-        Below are five samples generated with CFG (scale \(s=7\)).
-      </p>
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <h4>1.6 Classifier-Free Guidance (CFG)</h4>
+  <p>
+    Classifier-free guidance combines a conditional and unconditional noise
+    estimate to match to a prompt:
+    \[
+    \epsilon = \epsilon_u + s(\epsilon_c - \epsilon_u).
+    \]
+    Below are five samples generated with CFG (scale \(s=7\)).
+  </p>
       <div class="grid">
         <figure>
           <img src="images/parta/classifier_free_denoise_1.JPG" class="thumb" alt="CFG sample 1">
@@ -294,7 +333,131 @@
 
     <section id="a-i2i">
       <h3>1.7 Image-to-Image Translation and Editing</h3>
+      <p>
+        For this section, I'm using the same idea as in Part 1.4: take a real
+        image, add diffusion noise to it, and then run the denoising process to
+        "revert" the image. The denoising is undoing noise and fills in what is messed up by the noise.
+        This additional variance causes the images to deviate from the original
 
+      </p>
+        <p>
+        I followed the following steps to do this:
+        <ol>
+        <li>I chose the starting index (i_start \in {1, 3, 5, 7, 10, 20}).</li>
+        <li>I used the forward process at timestep t = strided_timesteps[i_start]
+        to create a noisy image.</li>
+        <li>Then I denoised using classifier-free guidance (CFG) with the
+        conditional prompt "a high quality photo" and an unconditional empty
+        prompt, using a guidance scale of 7.</li>
+        </ol>
+        Because of how the schedule works, smaller i_start corresponds
+        to starting earlier in the diffusion chain, meaning more noise and bigger edits,
+        while larger i_start means less initial noise, meaning smaller edits and higher
+        accuracy comparred to the original. In the results, you can see that trend clearly:
+        at low i_start the outputs are much more "creative" and drift away from
+        the original composition/details, while as i_start increases the generated
+        image gradually snaps back toward the original structure and appearance
+        (with intermediate steps giving realistic-but-different variations).
+
+        I saved each edited output and displayed them in a grid alongside the
+        original, labeled by i_start (and the corresponding timestep t) to make
+        the progression easy to compare.
+      </p>
+
+      
+<div class="grid">
+        <figure>
+          <img src="images/lastruna/camp-og.JPG" class="thumb" alt="campanile original">
+          <figcaption>Campanile original</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/camp-1.JPG" class="thumb" alt="campanile i_start=1">
+          <figcaption>Campanile i_start=1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/camp-3.JPG" class="thumb" alt="campanile i_start=3">
+          <figcaption>Campanile i_start=3</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/camp-5.JPG" class="thumb" alt="campanile i_start=5">
+          <figcaption>Campanile i_start=5</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/camp-7.JPG" class="thumb" alt="campanile i_start=7">
+          <figcaption>Campanile i_start=7</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/camp-10.JPG" class="thumb" alt="campanile i_start=10">
+          <figcaption>Campanile i_start=10</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/camp-20.JPG" class="thumb" alt="campanile i_start=20">
+          <figcaption>Campanile i_start=20</figcaption>
+        </figure>
+      </div>
+
+<div class="grid">
+        <figure>
+          <img src="images/lastruna/sushi-og.JPG" class="thumb" alt="Sushi original">
+          <figcaption>Sushi original</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/sushi-1.JPG" class="thumb" alt="Sushi i_start=1">
+          <figcaption>Sushi i_start=1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/sushi-3.JPG" class="thumb" alt="Sushi i_start=3">
+          <figcaption>Sushi i_start=3</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/sushi-5.JPG" class="thumb" alt="Sushi i_start=5">
+          <figcaption>Sushi i_start=5</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/sushi-7.JPG" class="thumb" alt="Sushi i_start=7">
+          <figcaption>Sushi i_start=7</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/sushi-10.JPG" class="thumb" alt="Sushi i_start=10">
+          <figcaption>Sushi i_start=10</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/sushi-20.JPG" class="thumb" alt="Sushi i_start=20">
+          <figcaption>Sushi i_start=20</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid">
+        <figure>
+          <img src="images/lastruna/ferris-og.JPG" class="thumb" alt="campanile original">
+          <figcaption>Ferris Wheel original</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/ferris-1.JPG" class="thumb" alt="Ferris Wheel i_start=1">
+          <figcaption>Ferris Wheel i_start=1</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/ferris-3.JPG" class="thumb" alt="Ferris Wheel i_start=3">
+          <figcaption>Ferris Wheel i_start=3</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/ferris-5.JPG" class="thumb" alt="Ferris Wheel i_start=5">
+          <figcaption>Ferris Wheel i_start=5</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/ferris-7.JPG" class="thumb" alt="Ferris Wheel i_start=7">
+          <figcaption>Ferris Wheel i_start=7</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/ferris-10.JPG" class="thumb" alt="Ferris Wheel i_start=10">
+          <figcaption>Ferris Wheel i_start=10</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/ferris-20.JPG" class="thumb" alt="Ferris Wheel i_start=20">
+          <figcaption>Ferris Wheel i_start=20</figcaption>
+        </figure>
+      </div>
+ 
       <h4>1.7.1 Editing Hand-Drawn and Web Images</h4>
       <div class="grid">
         <figure>
@@ -320,6 +483,10 @@
         <figure>
           <img src="images/171/tre20.jpg" class="thumb" alt="tree at i_start=20">
           <figcaption>tree at i_start=20</figcaption>
+        </figure>
+        <figure>
+          <img src="images/parta/tree.webp" class="thumb" alt="tree original">
+          <figcaption>tree original</figcaption>
         </figure>
       </div>
 
@@ -348,6 +515,10 @@
           <img src="images/171/bunny20.jpg" class="thumb" alt="bunny at i_start=20">
           <figcaption>bunny at i_start=20</figcaption>
         </figure>
+        <figure>
+          <img src="images/171/bunny.png" class="thumb" alt="bunny original">
+          <figcaption>bunny original</figcaption>
+        </figure>
       </div>
 
       <div class="grid">
@@ -375,28 +546,102 @@
           <img src="images/new_images/nailong20.png" class="thumb" alt="nailong at i_start=20">
           <figcaption>nailong at i_start=20</figcaption>
         </figure>
+        <figure>
+          <img src="images/new_images/nailong.jpg" class="thumb" alt="nailong original">
+          <figcaption>nailong original</figcaption>
+        </figure>
       </div>
 
       <h4>1.7.2 Inpainting</h4>
       <p>
-        Inpainting uses a binary mask \(m\) to constrain denoising so that only masked regions change:
+        For inpainting, the goal is to only edit a chosen region of the image while keeping everything else fixed. I do this with a
+        binary mask m, where m = 1 marks pixels I'm allowed to change (the hole), and m = 0 marks pixels I want to preserve.
+      </p>
+      <p>
+        The key idea is to run the normal diffusion denoising loop (with classifier-free guidance, using the prompt
+        "a high quality photo" and an empty unconditional prompt), but after each step I force the unmasked region to match the
+        original image at the correct noise level for that timestep:
         \[
-          x_t \leftarrow m\odot x_t + (1-m)\odot \text{forward}(x_{orig}, t).
-        \]
+        x_t \leftarrow m \odot x_t + (1-m)\odot \text{forward}(x_{\text{orig}}, t) \]
+        In my implementation, I start from pure noise, predict the previous timestep image using the same update rule
+        as iterative_denoise_cfg, then compute orig_noisy = forward(original_image, prev_t) and overwrite everything outside the mask using:
+          image = mask * pred_prev_image + (1 - mask) * orig_noisy.
+          This constraint makes the model invent new content only inside the mask, while the rest of the image stays locked
+          to the original (with consistent diffusion noise). I used this to inpaint the top of the Campanile, and then
+          repeated the same procedure on two of my own images with custom masks, saving and visualizing the final inpainted results.
+
       </p>
       <div class="grid">
+        <figure>
+          <img src="images/lastruna/172-campanile.JPG" class="thumb" alt="Campanile original">
+          <figcaption>Campanile</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/172-campanile-mask.JPG" class="thumb" alt="Campanile mask">
+          <figcaption>Campanile mask</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/172-campanile-hole.JPG" class="thumb" alt="Campanile hole to fill">
+          <figcaption>Campanile hole to fill</figcaption>
+        </figure>
         <figure>
           <img src="images/parta/inpainted_campinile.JPG" class="thumb" alt="Inpainting result on the Campanile">
           <figcaption>Inpainting result (Campanile)</figcaption>
         </figure>
       </div>
-      <!-- inpainting -->
+
+
+      <div class="grid">
+        <figure>
+          <img src="images/lastruna/172-melodrama.JPG" class="thumb" alt="Melodrama cover original">
+          <figcaption>Melodrama cover</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/172-melodrama-mask.JPG" class="thumb" alt="Melodrama cover mask">
+          <figcaption>Melodrama cover mask</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/172-melodrama-hole.JPG" class="thumb" alt="Melodrama cover hole to fill">
+          <figcaption>Melodrama cover hole to fill</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/inpainted_melodrama.JPG" class="thumb" alt="Inpainting result on the Melodrama cover">
+          <figcaption>Inpainting result (Melodrama cover)</figcaption>
+        </figure>
+      </div>
+
+
+      <div class="grid">
+        <figure>
+          <img src="images/lastruna/172-napkin.JPG" class="thumb" alt="Napkin original">
+          <figcaption>Napkin holder</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/172-napkin-mask.JPG" class="thumb" alt="Napkin mask">
+          <figcaption>Napkin holder mask</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/172-napkin-hole.JPG" class="thumb" alt="Napkin hole to fill">
+          <figcaption>Napkin holder hole to fill</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/inpainted_napkin.JPG" class="thumb" alt="Inpainting result on the Napkin">
+          <figcaption>Inpainting result (Napkin holder)</figcaption>
+        </figure>
+      </div>
 
       <h4>1.7.3 Text-Conditional Image-to-Image Translation</h4>
       <p>
-        I applied text-conditioned image-to-image translation by starting from a noisy version of an input image (controlled by <code>i_start</code>)
-        and denoising with a chosen prompt. Below are edits of the Campanile using different noise levels
-        \(i_{start} \in \{1,3,5,7,10,20\}\).
+        This section is the same SDEdit-style image-to-image setup as 1.7, except instead of
+        projecting back with a generic photo prior, I steer the denoising with an explicit text
+        prompt. Practically, the only change is swapping the conditional prompt embedding from
+        "a high quality photo" to whatever prompt I want (which was "a lithograph of waterfalls"),
+        while still using CFG with an empty unconditional prompt and guidance scale 7.
+        For each noise level among {1, 3, 5, 7, 10, 20}, I first ran the
+        forward process to make a noisy version of the Campanile, then denoised Lower
+        i_start means more noise, which gives larger, more varying results that follow the prompt 
+        not as strongly, while higher i_start preserves the original structure more closely and mostly 
+        switches up small details.
       </p>
       <div class="grid">
         <figure>
@@ -427,21 +672,155 @@
 
       <div class="grid">
         <figure>
-          <img src="images/parta/image_to_image_5.JPG" class="thumb" alt="Text-conditioned image-to-image translation on my own image">
-          <figcaption>Text-conditioned edit on my own test image</figcaption>
+          <img src="images/lastruna/173image_sushi_1.JPG" class="thumb" alt="Sushi edit with i_start=1">
+          <figcaption>Sushi edit (\(i_{start}=1\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_sushi_3.JPG" class="thumb" alt="Sushi edit with i_start=3">
+          <figcaption>Sushi edit (\(i_{start}=3\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_sushi_5.JPG" class="thumb" alt="Sushi edit with i_start=5">
+          <figcaption>Sushi edit (\(i_{start}=5\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_sushi_7.JPG" class="thumb" alt="Sushi edit with i_start=7">
+          <figcaption>Sushi edit (\(i_{start}=7\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_sushi_10.JPG" class="thumb" alt="Sushi edit with i_start=10">
+          <figcaption>Sushi edit (\(i_{start}=10\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_sushi_20.JPG" class="thumb" alt="Sushi edit with i_start=20">
+          <figcaption>Sushi edit (\(i_{start}=20\))</figcaption>
         </figure>
       </div>
-      <!-- 173 -->
+
+      <div class="grid">
+        <figure>
+          <img src="images/lastruna/173image_ferris_1.JPG" class="thumb" alt="Ferris wheel edit with i_start=1">
+          <figcaption>Ferris wheel  edit (\(i_{start}=1\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_ferris_3.JPG" class="thumb" alt="Ferris wheel  edit with i_start=3">
+          <figcaption>Ferris wheel  edit (\(i_{start}=3\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_ferris_5.JPG" class="thumb" alt="Ferris wheel  edit with i_start=5">
+          <figcaption>Ferris wheel  edit (\(i_{start}=5\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_ferris_7.JPG" class="thumb" alt="Ferris wheel  edit with i_start=7">
+          <figcaption>Ferris wheel  edit (\(i_{start}=7\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_ferris_10.JPG" class="thumb" alt="Ferris wheel  edit with i_start=10">
+          <figcaption>Ferris wheel  edit (\(i_{start}=10\))</figcaption>
+        </figure>
+        <figure>
+          <img src="images/lastruna/173image_ferris_20.JPG" class="thumb" alt="Ferris wheel  edit with i_start=20">
+          <figcaption>Ferris wheel  edit (\(i_{start}=20\))</figcaption>
+        </figure>
+      </div>
+
+
     </section>
 
     <section id="a-anagrams">
       <h3>1.8 Visual Anagrams</h3>
-      <!-- visual anagrams -->
+
+      <p>
+        Visual anagrams are two-in-one diffusion samples: the image should satisfy one prompt when viewed normally,
+        but a different prompt when flipped upside down. I needed to make the denoising step match both prompts at the same time, just in different directions.
+        </p><p>
+        
+        At each t, I calculated two noise estimates:
+        (\epsilon_1) to denoise the current image (x_t) with prompt 1 and
+        (\epsilon_2): to flip (x_t) vertically, denoise with prompt 2, then flipped the predicted noise back
+        
+        Then I averaged them to get the final noise prediction:
+\[
+\epsilon = \frac{\epsilon_1 + \epsilon_2}{2}
+\]
+and use (\epsilon) in the standard reverse diffusion update to get (x_{t-1}). Because 
+the same latent is being pushed to match two different text conditions (depending on orientation), the final sample 
+ends up encoding both prompts: one interpretation upright and a different one when flipped.
+
+In code, this is implemented by running the UNet twice per step (once on img, once on flip(img)), 
+applying CFG to each, flipping the second noise estimate back, and averaging before the usual x0_est → pred_prev_image update. 
+I generated two different prompt pairs, and for each result I saved both the normal image and the 
+flipped version to show the illusion clearly.
+      </p>
+
+      <p>Visual anagram with "a photo of a dog" and "a photo of the amalfi coast"</p>
+      <div class="grid">
+        <figure>
+          <img src="images/new_images/visual_anagram-dog-coast.JPG" class="thumb" alt="visual anagram">
+          <figcaption>original</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/visual_anagram-dog-coast-flipped.JPG" class="thumb" alt="visual anagram">
+          <figcaption>flipped</figcaption>
+        </figure>
+      </div>
+
+      <p>Visual anagram with "a lithograph of waterfalls" and "an oil painting of people around a campfire"</p>
+      <div class="grid">
+        <figure>
+          <img src="images/new_images/visual_anagram-waterfalls-skull.JPG" class="thumb" alt="visual anagram">
+          <figcaption>original</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/visual_anagram-waterfalls-skull-flipped.JPG" class="thumb" alt="visual anagram">
+          <figcaption>flipped</figcaption>
+        </figure>
+      </div>
     </section>
 
     <section id="a-hybrids">
       <h3>1.9 Hybrid Images</h3>
-      <!-- hybrids -->
+
+      <p>For hybrid images, the goal is to make a single diffusion sample that
+        contains two prompts at different spatial frequency bands, so the image
+        reads like one thing from far away (low frequencies) and another thing up close
+        (high frequencies), similar to the classic hybrid images idea from Project 2.
+        
+        At each denoising step (t), I compute two CFG noise estimates from the same latent
+        (x_t), one for prompt (p_1) and one for prompt (p_2):
+\[
+\epsilon_1 = \text{CFG}(\text{UNet}(x_t,t,p_1)), \quad
+\epsilon_2 = \text{CFG}(\text{UNet}(x_t,t,p_2))
+\]
+Then I factorize the guidance by mixing frequency content:
+\[
+\epsilon = \text{lowpass}(\epsilon_1) + \text{highpass}(\epsilon_2)
+\]
+I implemented the low/high split using a Gaussian blur (kernel size 33, (\sigma=2)):
+low = gaussian_blur(\epsilon), high = \epsilon - low. Finally, I plugged this composite (\epsilon) into
+the standard reverse diffusion update to get (x_{t-1}).
+
+In practice, this makes the denoising process match both prompts simultaneously
+but at different scales: the smooth structure is driven by (p_1), while the sharp details are
+ driven by (p_2).</p>
+
+      <p>prompts:
+        <br>
+        "a pencil" and "a man wearing a hat" AND
+        <br>
+        "a rocket ship" and "a lithograph of waterfalls"
+      </p>
+    
+      <div class="grid">
+        <figure>
+          <img src="images/new_images/hybrid-pencil-man.JPG" class="thumb" alt="visual anagram">
+          <figcaption>hybrid pencil / man</figcaption>
+        </figure>
+        <figure>
+          <img src="images/new_images/hybrid-rocket-waterfalls.JPG" class="thumb" alt="visual anagram">
+          <figcaption>hybrid rocket / waterfalls</figcaption>
+        </figure>
+      </div>
     </section>
 
   </section>
@@ -498,7 +877,7 @@
       <h4>1.2.3 Denoising Pure Noise</h4>
       <p>
         I also trained a model where the input is pure noise (instead of a noised MNIST digit). With an MSE objective, the model tends to
-        predict something like an “average” over the training distribution, which can lead to blurry, superimposed digit-like patterns.
+        predict something like an "average" over the training distribution, which can lead to blurry, superimposed digit-like patterns.
       </p>
       <!-- training loss curve for pure-noise denoising + sample results after epochs 1 and 5 -->
     </section>
